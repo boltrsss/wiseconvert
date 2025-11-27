@@ -138,8 +138,9 @@ const FileUpload: React.FC = () => {
     }));
   };
 
-  const currentSettingsItem =
-    settingsForFileId && queue.find((q) => q.id === settingsForFileId);
+  const currentSettingsItem: UploadItem | undefined = settingsForFileId
+  ? queue.find((q) => q.id === settingsForFileId) || undefined
+  : undefined;
 
   return (
     <div className="w-full flex flex-col items-center py-10 px-4">

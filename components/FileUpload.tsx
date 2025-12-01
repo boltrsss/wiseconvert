@@ -1,165 +1,229 @@
-
 "use client";
 
-import React, { useEffect, useState } from "react";
-import UploadDropzone from "@/components/UploadDropzone";
-import ConversionQueue from "@/components/ConversionQueue";
-import SettingsModal from "@/components/SettingsModal";
-import { UploadItem, VideoSettings } from "@/types/files";
+import React, { useCallback, useRef, useState } from "react";
 import {
   getUploadUrl,
   uploadFileToS3,
   startConversion,
-  getJobStatus
+  getJobStatus,
+  type StatusResponse,
 } from "@/lib/api";
+import { UploadItem, UploadStatus } from "@/types/files";
 
-const ALLOWED_EXTENSIONS = [
-  "mp4","mkv","mov","avi","webm",
-  "mp3","wav","ogg","aac","flac",
-  "jpg","jpeg","png","webp","gif","heic","svg",
-  "pdf","docx","pptx","xlsx",
-  "epub","mobi","azw3"
-];
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-function getExtension(name: string): string {
-  const parts = name.split(".");
-  return parts.length > 1 ? parts.pop()!.toLowerCase() : "";
-}
+console.log("[FileUpload] API_BASE =", API_BASE);
 
-const FileUpload: React.FC = () => {
-  const [queue, setQueue] = useState<UploadItem[]>([]);
-  const [settingsForFileId, setSettingsForFileId] = useState<string | null>(null);
+export default function FileUpload() {
+  const [items, setItems] = useState<UploadItem[]>([]);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const updateItem = (id: string, updater: (item: UploadItem) => UploadItem) => {
-    setQueue((prev) => prev.map((item) => (item.id === id ? updater(item) : item)));
+  const addItem = (file: File): UploadItem => {
+    const id = crypto.randomUUID();
+    const item: UploadItem = {
+      id,
+      file,
+      name: file.name,
+      size: file.size,
+      status: "waiting",
+      progress: 0,
+    };
+    setItems((prev) => [...prev, item]);
+    return item;
   };
 
-  const handleFilesSelected = (files: FileList | File[]) => {
-    const arr = Array.from(files);
-    const newItems: UploadItem[] = arr.map((file) => {
-      const ext = getExtension(file.name);
-      const isAllowed = ALLOWED_EXTENSIONS.includes(ext);
-      return {
-        id: crypto.randomUUID(),
-        file,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        status: isAllowed ? "idle" : "error",
-        progress: isAllowed ? 0 : 100,
-        isVideo: ["mp4", "mkv", "mov", "avi", "webm"].includes(ext),
-        errorMessage: isAllowed ? undefined : "Unsupported file type."
-      };
-    });
-
-    setQueue((prev) => [...prev, ...newItems]);
-    newItems.filter((i) => i.status === "idle").forEach((i) => handleUploadAndConvert(i.id));
+  const updateItem = (id: string, patch: Partial<UploadItem>) => {
+    setItems((prev) =>
+      prev.map((it) => (it.id === id ? { ...it, ...patch } : it))
+    );
   };
 
-  const handleUploadAndConvert = async (id: string) => {
-    const item = queue.find((x) => x.id === id);
-    if (!item || item.status === "uploading" || item.status === "done") return;
-    if (item.status === "error") return;
-
+  const runJobPipeline = async (item: UploadItem) => {
     try {
-      updateItem(id, (cur) => ({ ...cur, status: "uploading", progress: 5 }));
+      console.log("[pipeline] start for", item.name);
 
-      const { upload_url, key } = await getUploadUrl(item.file);
-      await uploadFileToS3(item.file, upload_url);
-      updateItem(id, (cur) => ({ ...cur, status: "uploading", progress: 40 }));
+      updateItem(item.id, { status: "uploading", progress: 0 });
 
-      const ext = getExtension(item.name);
-      const targetExt = item.isVideo ? "mp4" : ext || "pdf";
+      // 1. 拿 presigned URL
+      const uploadInfo = await getUploadUrl(item.file);
+      console.log("[pipeline] got upload URL", uploadInfo);
 
-      const resp = await startConversion(key, targetExt, item.videoSettings);
-      updateItem(id, (cur) => ({
-        ...cur,
-        status: "processing",
-        progress: 50,
-        jobId: resp.job_id
-      }));
-    } catch (err: any) {
-      console.error(err);
-      updateItem(id, (cur) => ({
-        ...cur,
+      // 2. 上傳到 S3
+      await uploadFileToS3(item.file, uploadInfo.upload_url);
+      console.log("[pipeline] uploaded to S3");
+
+      updateItem(item.id, { status: "processing", progress: 10 });
+
+      // 3. 呼叫轉檔 API
+      const targetFormat = "png"; // 先寫死，之後可以做 UI
+      const { job_id } = await startConversion(
+        uploadInfo.key,
+        targetFormat
+      );
+
+      console.log("[pipeline] job started", job_id);
+
+      updateItem(item.id, { jobId: job_id, status: "processing" });
+
+      // 4. 定時 polling
+      const poll = async (): Promise<void> => {
+        console.log("[pipeline] polling", job_id);
+        const res: StatusResponse = await getJobStatus(job_id);
+
+        console.log("[pipeline] status", res);
+
+        if (res.status === "completed") {
+          updateItem(item.id, {
+            status: "done",
+            progress: 100,
+            outputKey: res.output_s3_key,
+          });
+          return;
+        }
+
+        if (res.status === "failed" || res.status === "error") {
+          updateItem(item.id, {
+            status: "error",
+            progress: 100,
+          });
+          return;
+        }
+
+        // 還在處理中 → 再等一下
+        const nextProgress = Math.min(
+          95,
+          (res.progress ?? 0) || 20
+        );
+        updateItem(item.id, { progress: nextProgress });
+
+        setTimeout(poll, 3000);
+      };
+
+      setTimeout(poll, 3000);
+    } catch (err) {
+      console.error("[pipeline] error", err);
+      updateItem(item.id, {
         status: "error",
         progress: 100,
-        errorMessage: err?.message || "Upload or conversion failed"
-      }));
+      });
     }
   };
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const itemsWithJobs = queue.filter(
-        (i) => i.jobId && (i.status === "processing" || i.status === "uploading")
-      );
-      if (itemsWithJobs.length === 0) return;
-
-      for (const item of itemsWithJobs) {
-        try {
-          if (!item.jobId) continue;
-          const status = await getJobStatus(item.jobId);
-          updateItem(item.id, (cur) => {
-            const next: UploadItem = { ...cur };
-            if (status.progress !== undefined) {
-              next.progress = status.progress;
-            }
-            if (status.status === "completed") {
-              next.status = "done";
-              next.progress = 100;
-            } else if (status.status === "failed") {
-              next.status = "error";
-              next.progress = 100;
-              next.errorMessage = status.message || "Conversion failed";
-            } else if (status.status === "processing") {
-              next.status = "processing";
-            }
-            return next;
-          });
-        } catch (e) {
-          console.error(e);
-        }
+  const handleFiles = useCallback(
+    (files: FileList | File[]) => {
+      const list = Array.from(files);
+      for (const file of list) {
+        const item = addItem(file);
+        // 直接啟動 pipeline
+        void runJobPipeline(item);
       }
-    }, 2000);
+    },
+    [runJobPipeline]
+  );
 
-    return () => clearInterval(interval);
-  }, [queue]);
+  const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
 
-  const handleOpenSettings = (fileId: string) => {
-    setSettingsForFileId(fileId);
+    const dt = e.dataTransfer;
+    if (!dt) return;
+
+    if (dt.files && dt.files.length > 0) {
+      handleFiles(dt.files);
+    }
   };
 
-  const handleSaveSettings = (settings: VideoSettings) => {
-    if (!settingsForFileId) return;
-    updateItem(settingsForFileId, (cur) => ({
-      ...cur,
-      videoSettings: settings
-    }));
+  const onDragOver: React.DragEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
   };
 
-  const currentSettingsItem: UploadItem | undefined = settingsForFileId
-  ? queue.find((q) => q.id === settingsForFileId) || undefined
-  : undefined;
+  const onDragLeave: React.DragEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const onFileInputChange: React.ChangeEventHandler<HTMLInputElement> = (
+    e
+  ) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFiles(files);
+      e.target.value = "";
+    }
+  };
 
   return (
-    <div className="w-full flex flex-col items-center py-10 px-4">
-      <div className="w-full max-w-4xl text-center">
-        <h1 className="text-2xl font-bold text-gray-900">WiseConvert Online File Converter</h1>
-        <p className="mt-2 text-sm text-gray-500">
-          Convert videos, audio, images, documents, and ebooks via a secure cloud backend.
-        </p>
+    <div className="w-full flex flex-col gap-6">
+      {/* Drop zone */}
+      <div
+        className={`w-full max-w-3xl border-2 border-dashed rounded-2xl p-10 mx-auto text-center transition-colors ${
+          isDragging
+            ? "border-blue-500 bg-blue-50"
+            : "border-gray-300 bg-white"
+        }`}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onClick={() => inputRef.current?.click()}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
+            <span className="text-2xl">⬆️</span>
+          </div>
+          <p className="text-lg font-semibold">
+            Drop files here or <span className="text-blue-600 underline">browse</span>
+          </p>
+          <p className="text-xs text-gray-500">
+            Supports Video, Audio, Images, Documents &amp; Ebooks · Up to 5
+            GB (Pro)
+          </p>
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={onFileInputChange}
+        />
       </div>
-      <UploadDropzone onFilesSelected={handleFilesSelected} />
-      <ConversionQueue items={queue} onOpenSettings={handleOpenSettings} />
-      <SettingsModal
-        isOpen={!!settingsForFileId}
-        initialSettings={currentSettingsItem?.videoSettings}
-        onClose={() => setSettingsForFileId(null)}
-        onSave={handleSaveSettings}
-      />
+
+      {/* Queue */}
+      <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-sm p-4">
+        <h2 className="font-semibold mb-3">Conversion Queue</h2>
+        {items.length === 0 && (
+          <p className="text-sm text-gray-400">
+            No files yet. Drop a file to start converting.
+          </p>
+        )}
+        <ul className="space-y-3">
+          {items.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-center justify-between gap-4 text-sm"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="font-medium truncate">{item.name}</div>
+                <div className="text-xs text-gray-400">
+                  {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
+                  {item.status}
+                </div>
+                <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-2 bg-blue-500 transition-all"
+                    style={{ width: `${item.progress ?? 0}%` }}
+                  />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
-};
-
-export default FileUpload;
+}

@@ -18,4 +18,5 @@ export type UploadItem = {
   status: UploadStatus;
   progress: number;
   outputKey?: string;   // <-- add this line
+  errorMessage?: string;   // <-- add this line
 };

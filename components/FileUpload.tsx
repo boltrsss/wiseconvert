@@ -27,7 +27,7 @@ export default function FileUpload() {
       file,
       name: file.name,
       size: file.size,
-      status: "waiting",
+      status: "waiting" as UploadStatus,
       progress: 0,
     };
     setItems((prev) => [...prev, item]);

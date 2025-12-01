@@ -21,18 +21,24 @@ export default function FileUpload() {
   const [isDragging, setIsDragging] = useState(false);
 
   const addItem = (file: File): UploadItem => {
-    const id = crypto.randomUUID();
-    const item: UploadItem = {
-      id,
-      file,
-      name: file.name,
-      size: file.size,
-      status: "waiting" as UploadStatus,
-      progress: 0,
-    };
-    setItems((prev) => [...prev, item]);
-    return item;
+  const id = crypto.randomUUID();
+
+  const item: UploadItem = {
+    id,
+    file,
+    name: file.name,
+    size: file.size,
+    // NEW
+    type: file.type || "application/octet-stream",
+    isVideo: file.type.startsWith("video/"),
+    // ---
+    status: "waiting" as UploadStatus,
+    progress: 0,
   };
+
+  setItems((prev) => [...prev, item]);
+  return item;
+};
 
   const updateItem = (id: string, patch: Partial<UploadItem>) => {
     setItems((prev) =>

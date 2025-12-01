@@ -8,16 +8,14 @@ export type VideoSettings = {
   frameRate: string;
 };
 
-export interface UploadItem {
+export type UploadItem = {
   id: string;
   file: File;
   name: string;
   size: number;
   type: string;
-  status: UploadStatus;
-  progress: number; // 0-100
   isVideo: boolean;
-  jobId?: string;
-  videoSettings?: VideoSettings;
-  errorMessage?: string;
-}
+  status: UploadStatus;
+  progress: number;
+  outputKey?: string;   // <-- add this line
+};

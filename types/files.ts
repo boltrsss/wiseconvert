@@ -17,6 +17,7 @@ export type UploadItem = {
   isVideo: boolean;
   status: UploadStatus;
   progress: number;
+  jobId?: string;        // <-- add this
   outputKey?: string;   // <-- add this line
   errorMessage?: string;   // <-- add this line
 };

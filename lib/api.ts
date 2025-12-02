@@ -1,7 +1,7 @@
 
 import { VideoSettings } from "@/types/files";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = ""; // same origin
 
 export type UploadUrlResponse = {
   upload_url: string;

@@ -1,36 +1,34 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
 
-const BACKEND_ORIGIN =
-  process.env.BACKEND_ORIGIN || "http://37.27.181.162:8000";
+const BACKEND_BASE_URL = "http://37.27.181.162:8000"; // FastAPI backend
 
-export async function POST(req: NextRequest): Promise<Response> {
-  const body = await req.text();
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
 
-  // 把原本的 headers 拿來用（但 host 要給後端自己的）
-  const headers: Record<string, string> = {};
-  req.headers.forEach((value, key) => {
-    if (key.toLowerCase() !== "host") {
-      headers[key] = value;
-    }
-  });
-  // 確保 content-type 是 json
-  headers["content-type"] = "application/json";
+    const backendRes = await fetch(`${BACKEND_BASE_URL}/api/get-upload-url`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
-  const backendResp = await fetch(`${BACKEND_ORIGIN}/api/get-upload-url`, {
-    method: "POST",
-    headers,
-    body,
-  });
+    const text = await backendRes.text();
 
-  const text = await backendResp.text();
-
-  return new Response(text, {
-    status: backendResp.status,
-    headers: {
-      "content-type":
-        backendResp.headers.get("content-type") ?? "application/json",
-    },
-  });
+    return new NextResponse(text, {
+      status: backendRes.status,
+      headers: {
+        "Content-Type": backendRes.headers.get("content-type") || "application/json",
+      },
+    });
+  } catch (err) {
+    console.error("[get-upload-url] proxy error", err);
+    return NextResponse.json(
+      { detail: "Proxy error in /api/get-upload-url" },
+      { status: 500 },
+    );
+  }
 }

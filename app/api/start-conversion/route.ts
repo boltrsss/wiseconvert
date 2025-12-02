@@ -1,28 +1,34 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
 
-const BACKEND_ORIGIN =
-  process.env.BACKEND_ORIGIN || "http://37.27.181.162:8000";
+const BACKEND_BASE_URL = "http://37.27.181.162:8000"; // FastAPI backend
 
-export async function POST(req: NextRequest): Promise<Response> {
-  const body = await req.text();
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
 
-  const resp = await fetch(`${BACKEND_ORIGIN}/api/start-conversion`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body,
-  });
+    const backendRes = await fetch(`${BACKEND_BASE_URL}/api/start-conversion`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
-  const text = await resp.text();
+    const text = await backendRes.text();
 
-  return new Response(text, {
-    status: resp.status,
-    headers: {
-      "Content-Type":
-        resp.headers.get("content-type") ?? "application/json",
-    },
-  });
+    return new NextResponse(text, {
+      status: backendRes.status,
+      headers: {
+        "Content-Type": backendRes.headers.get("content-type") || "application/json",
+      },
+    });
+  } catch (err) {
+    console.error("[start-conversion] proxy error", err);
+    return NextResponse.json(
+      { detail: "Proxy error in /api/start-conversion" },
+      { status: 500 },
+    );
+  }
 }

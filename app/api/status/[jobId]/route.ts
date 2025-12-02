@@ -1,29 +1,40 @@
-
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
 
-const BACKEND_ORIGIN =
-  process.env.BACKEND_ORIGIN || "http://37.27.181.162:8000";
+const BACKEND_BASE_URL = "http://37.27.181.162:8000"; // FastAPI backend
 
 type Params = {
-  params: { jobId: string };
+  params: {
+    jobId: string;
+  };
 };
 
-export async function GET(_req: Request, { params }: Params): Promise<Response> {
+export async function GET(_req: NextRequest, { params }: Params) {
   const { jobId } = params;
 
-  const resp = await fetch(`${BACKEND_ORIGIN}/api/status/${jobId}`, {
-    method: "GET",
-  });
+  if (!jobId) {
+    return NextResponse.json({ detail: "jobId is required" }, { status: 400 });
+  }
 
-  const text = await resp.text();
+  try {
+    const backendRes = await fetch(`${BACKEND_BASE_URL}/api/status/${jobId}`, {
+      method: "GET",
+    });
 
-  return new Response(text, {
-    status: resp.status,
-    headers: {
-      "Content-Type":
-        resp.headers.get("content-type") ?? "application/json",
-    },
-  });
+    const text = await backendRes.text();
+
+    return new NextResponse(text, {
+      status: backendRes.status,
+      headers: {
+        "Content-Type": backendRes.headers.get("content-type") || "application/json",
+      },
+    });
+  } catch (err) {
+    console.error("[status] proxy error", err);
+    return NextResponse.json(
+      { detail: "Proxy error in /api/status/[jobId]" },
+      { status: 500 },
+    );
+  }
 }

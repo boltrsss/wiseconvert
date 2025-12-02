@@ -1,7 +1,7 @@
 // lib/api.ts
 import { VideoSettings } from "@/types/files";
 
-// 所有請求都打到同網域的 /api
+// 所有 API 都打到同網域的 /api
 const API_BASE = "/api";
 
 export type UploadUrlResponse = {

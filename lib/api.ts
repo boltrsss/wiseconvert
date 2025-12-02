@@ -1,7 +1,7 @@
 
 import { VideoSettings } from "@/types/files";
 
-const API_BASE = ""; // same origin
+const API_BASE = "/api"; // same origin under /api
 
 export type UploadUrlResponse = {
   upload_url: string;

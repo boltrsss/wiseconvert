@@ -10,9 +10,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   const resp = await fetch(`${BACKEND_ORIGIN}/api/get-upload-url`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body,
   });
 

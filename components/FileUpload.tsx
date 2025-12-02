@@ -10,8 +10,8 @@ import {
 } from "@/lib/api";
 import { UploadItem, UploadStatus } from "@/types/files";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = "/api";
+console.log("[FileUpload] API_BASE =", API_BASE);
 
 console.log("[FileUpload] API_BASE =", API_BASE);
 

@@ -1,3 +1,8 @@
+
+import { NextRequest } from "next/server";
+
+export const runtime = "edge";
+
 const BACKEND_ORIGIN =
   process.env.BACKEND_ORIGIN || "http://37.27.181.162:8000";
 

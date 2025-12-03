@@ -1,8 +1,10 @@
 // lib/api.ts
+
 import { VideoSettings } from "@/types/files";
 
-// 所有 API 都打到同網域的 /api
-const API_BASE = "/api";
+// 這裡改成你的後端網域
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE || "https://cnv.wiseconverthub.com";
 
 export type UploadUrlResponse = {
   upload_url: string;
@@ -10,7 +12,7 @@ export type UploadUrlResponse = {
 };
 
 export async function getUploadUrl(file: File): Promise<UploadUrlResponse> {
-  const res = await fetch(`${API_BASE}/get-upload-url`, {
+  const res = await fetch(`${API_BASE}/api/get-upload-url`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -53,7 +55,7 @@ export async function startConversion(
   targetFormat: string,
   videoSettings?: VideoSettings
 ): Promise<StartConversionResponse> {
-  const res = await fetch(`${API_BASE}/start-conversion`, {
+  const res = await fetch(`${API_BASE}/api/start-conversion`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -80,7 +82,7 @@ export type StatusResponse = {
 };
 
 export async function getJobStatus(jobId: string): Promise<StatusResponse> {
-  const res = await fetch(`${API_BASE}/status/${jobId}`, {
+  const res = await fetch(`${API_BASE}/api/status/${jobId}`, {
     method: "GET",
   });
 

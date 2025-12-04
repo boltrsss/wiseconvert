@@ -1,5 +1,6 @@
 // app/page.tsx
 import React from "react";
+import { AdSlot } from "@/components/AdSlot"; // 如果 @ 無法用，換成 "../components/AdSlot"
 
 export default function HomePage() {
   return (
@@ -44,7 +45,8 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="flex-1">
+      {/* main 加 padding-bottom，避免被手機 Sticky 廣告遮住 */}
+      <main className="flex-1 pb-20 lg:pb-0">
         {/* ===== File Converter 主區塊 ===== */}
         <section
           id="converter"
@@ -52,7 +54,7 @@ export default function HomePage() {
         >
           <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 py-10 lg:py-14">
             {/* Title */}
-            <div className="text-center mb-8 lg:mb-10">
+            <div className="text-center mb-6 lg:mb-8">
               <h1 className="text-4xl sm:text-[42px] font-semibold text-slate-900">
                 File Converter
               </h1>
@@ -61,21 +63,34 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* 三欄：左廣告 / 中央工具 / 右廣告 */}
+            {/* 手機版頂部廣告（桌機隱藏） */}
+            <div className="mb-4 lg:hidden">
+              <AdSlot
+                slotId="top-mobile"
+                label="AD TOP MOBILE — 320×100"
+                className="h-16"
+              />
+            </div>
+
+            {/* 三欄：左廣告 / 中央工具 / 右廣告（桌機） */}
             <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)_320px] gap-4 lg:gap-6">
               {/* 左側大廣告（桌機） */}
               <div className="hidden lg:block">
-                <div className="w-full h-[600px] rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
-                  AD SLOT LEFT — 300×600
-                </div>
+                <AdSlot
+                  slotId="sidebar-left"
+                  label="AD SLOT LEFT — 300×600"
+                  className="w-full h-[600px]"
+                />
               </div>
 
               {/* 中央內容 */}
               <div className="space-y-4 lg:space-y-5">
-                {/* 上方橫幅廣告 */}
-                <div className="w-full h-20 sm:h-24 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
-                  AD SLOT TOP — 970×90 / 728×90
-                </div>
+                {/* 上方橫幅廣告（桌機） */}
+                <AdSlot
+                  slotId="top-desktop"
+                  label="AD SLOT TOP — 970×90 / 728×90"
+                  className="hidden lg:flex h-20"
+                />
 
                 {/* ===== Uploader Card ===== */}
                 <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
@@ -110,12 +125,12 @@ export default function HomePage() {
                             </span>
                           </p>
 
-                          {/* 未來改成你的 FileUpload / UploadDropzone component */}
+                          {/* 之後你可以用自己的 <FileUpload /> / <UploadDropzone /> */}
                           <input type="file" className="hidden" />
 
                           <p className="mt-4 text-xs text-slate-400">
-                            Max file size 1GB. No watermarks. By proceeding, you
-                            agree to our Terms of Use.
+                            Max file size 1GB. No watermarks. By proceeding,
+                            you agree to our Terms of Use.
                           </p>
                         </div>
                       </div>
@@ -163,24 +178,40 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* 下方橫幅 */}
-                <div className="w-full h-20 sm:h-24 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
-                  AD SLOT BOTTOM — 970×90 / 728×90
+                {/* 手機版：內容中間一個 banner（桌機隱藏） */}
+                <div className="lg:hidden">
+                  <AdSlot
+                    slotId="in-content-mobile"
+                    label="AD IN-CONTENT MOBILE — 320×100"
+                    className="h-20"
+                  />
                 </div>
+
+                {/* 下方橫幅（桌機） */}
+                <AdSlot
+                  slotId="bottom-desktop"
+                  label="AD SLOT BOTTOM — 970×90 / 728×90"
+                  className="hidden lg:flex h-20"
+                />
               </div>
 
-              {/* 右側大廣告 */}
+              {/* 右側大廣告（桌機） */}
               <div className="hidden lg:block">
-                <div className="w-full h-[600px] rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
-                  AD SLOT RIGHT — 300×600
-                </div>
+                <AdSlot
+                  slotId="sidebar-right"
+                  label="AD SLOT RIGHT — 300×600"
+                  className="w-full h-[600px]"
+                />
               </div>
             </div>
           </div>
         </section>
 
         {/* ===== Why WiseConvert ===== */}
-        <section id="why" className="py-12 lg:py-14 bg-white border-b border-slate-200">
+        <section
+          id="why"
+          className="py-12 lg:py-14 bg-white border-b border-slate-200"
+        >
           <div className="max-w-screen-2xl mx-auto px-6 lg:px-10">
             <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 mb-6">
               Why choose WiseConvert?
@@ -236,7 +267,7 @@ export default function HomePage() {
               How it works
             </h2>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 {
                   step: 1,
@@ -319,6 +350,17 @@ export default function HomePage() {
           </div>
         </section>
       </main>
+
+      {/* 手機 Sticky 底部廣告（全站共用） */}
+      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden">
+        <div className="max-w-screen-sm mx-auto px-3 pb-2">
+          <AdSlot
+            slotId="sticky-mobile"
+            label="AD STICKY MOBILE — 320×50"
+            className="h-12 shadow-lg"
+          />
+        </div>
+      </div>
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white">

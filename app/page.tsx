@@ -6,19 +6,19 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       {/* Navbar */}
       <header className="border-b border-slate-200 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 h-20 flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
           {/* Logo */}
           <a href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-base">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
               W
             </div>
-            <span className="text-2xl font-semibold tracking-tight">
+            <span className="text-xl font-semibold tracking-tight">
               Wise<span className="text-blue-600">Convert</span>
             </span>
           </a>
 
           {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-8 text-[15px] font-medium text-slate-600">
+          <nav className="hidden md:flex items-center gap-8 text-[16px] font-medium text-slate-600">
             <a href="#converter" className="hover:text-blue-600">
               Convert
             </a>
@@ -33,11 +33,11 @@ export default function HomePage() {
             </a>
           </nav>
 
-          <div className="hidden md:flex items-center gap-4 text-[15px] font-medium">
-            <button className="px-4 py-2 rounded-lg hover:bg-slate-100">
+          <div className="hidden md:flex items-center gap-4 text-[16px] font-medium">
+            <button className="px-4 py-1.5 rounded-lg hover:bg-slate-100">
               Log in
             </button>
-            <button className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <button className="px-5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
               Sign up
             </button>
           </div>
@@ -50,19 +50,19 @@ export default function HomePage() {
           id="converter"
           className="bg-slate-50 border-b border-slate-200"
         >
-          <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16">
+          <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 py-10 lg:py-14">
             {/* Title */}
-            <div className="text-center mb-10">
-              <h1 className="text-4xl sm:text-5xl font-semibold text-slate-900">
+            <div className="text-center mb-8 lg:mb-10">
+              <h1 className="text-4xl sm:text-[42px] font-semibold text-slate-900">
                 File Converter
               </h1>
-              <p className="mt-4 text-lg text-slate-500">
+              <p className="mt-3 text-base sm:text-lg text-slate-500">
                 Easily convert files from one format to another, online.
               </p>
             </div>
 
             {/* 三欄：左廣告 / 中央工具 / 右廣告 */}
-            <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)_280px] gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)_320px] gap-4 lg:gap-6">
               {/* 左側大廣告（桌機） */}
               <div className="hidden lg:block">
                 <div className="w-full h-[600px] rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
@@ -71,9 +71,9 @@ export default function HomePage() {
               </div>
 
               {/* 中央內容 */}
-              <div className="space-y-6">
+              <div className="space-y-4 lg:space-y-5">
                 {/* 上方橫幅廣告 */}
-                <div className="w-full h-24 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
+                <div className="w-full h-20 sm:h-24 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
                   AD SLOT TOP — 970×90 / 728×90
                 </div>
 
@@ -81,9 +81,9 @@ export default function HomePage() {
                 <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
                   {/* Dropzone */}
                   <div className="border-b border-slate-200 bg-slate-50">
-                    <div className="px-6 sm:px-10 py-12 sm:py-16">
+                    <div className="px-6 sm:px-10 py-10 sm:py-12">
                       <div className="mx-auto max-w-xl">
-                        <div className="border-2 border-dashed border-slate-200 rounded-2xl bg-white/60 p-10 flex flex-col items-center text-center">
+                        <div className="border-2 border-dashed border-slate-200 rounded-2xl bg-white/60 px-6 py-10 sm:px-10 sm:py-12 flex flex-col items-center text-center">
                           <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4">
                             <svg
                               className="w-8 h-8 text-blue-600"
@@ -110,6 +110,7 @@ export default function HomePage() {
                             </span>
                           </p>
 
+                          {/* 未來改成你的 FileUpload / UploadDropzone component */}
                           <input type="file" className="hidden" />
 
                           <p className="mt-4 text-xs text-slate-400">
@@ -122,13 +123,13 @@ export default function HomePage() {
                   </div>
 
                   {/* 底部設定列 */}
-                  <div className="px-6 sm:px-10 py-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+                  <div className="px-6 sm:px-10 py-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-medium text-slate-600">
                           Convert to
                         </span>
-                        <select className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:ring-blue-500">
+                        <select className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:ring-blue-500 focus:outline-none">
                           <optgroup label="Images">
                             <option>JPG</option>
                             <option>PNG</option>
@@ -149,7 +150,7 @@ export default function HomePage() {
                         </select>
                       </div>
 
-                      <button className="inline-flex justify-center items-center rounded-lg bg-blue-600 text-white text-sm font-semibold px-8 py-3 hover:bg-blue-700">
+                      <button className="inline-flex justify-center items-center rounded-lg bg-blue-600 text-white text-sm font-semibold px-8 py-2.5 hover:bg-blue-700">
                         Start conversion
                       </button>
                     </div>
@@ -163,7 +164,7 @@ export default function HomePage() {
                 </div>
 
                 {/* 下方橫幅 */}
-                <div className="w-full h-24 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
+                <div className="w-full h-20 sm:h-24 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
                   AD SLOT BOTTOM — 970×90 / 728×90
                 </div>
               </div>
@@ -179,9 +180,9 @@ export default function HomePage() {
         </section>
 
         {/* ===== Why WiseConvert ===== */}
-        <section id="why" className="py-14 bg-white border-b border-slate-200">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <h2 className="text-3xl font-semibold text-slate-900 mb-6">
+        <section id="why" className="py-12 lg:py-14 bg-white border-b border-slate-200">
+          <div className="max-w-screen-2xl mx-auto px-6 lg:px-10">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 mb-6">
               Why choose WiseConvert?
             </h2>
 
@@ -228,10 +229,10 @@ export default function HomePage() {
         {/* ===== How it works ===== */}
         <section
           id="how-it-works"
-          className="py-14 bg-slate-50 border-b border-slate-200"
+          className="py-12 lg:py-14 bg-slate-50 border-b border-slate-200"
         >
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <h2 className="text-3xl font-semibold text-slate-900 mb-10">
+          <div className="max-w-screen-2xl mx-auto px-6 lg:px-10">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 mb-8">
               How it works
             </h2>
 
@@ -278,9 +279,9 @@ export default function HomePage() {
         </section>
 
         {/* ===== Pricing ===== */}
-        <section id="pricing" className="py-14 bg-white">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <h2 className="text-3xl font-semibold text-slate-900 mb-8">
+        <section id="pricing" className="py-12 lg:py-14 bg-white">
+          <div className="max-w-screen-2xl mx-auto px-6 lg:px-10">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 mb-8">
               Start free. Upgrade later.
             </h2>
 
@@ -321,7 +322,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8 flex flex-col sm:flex-row justify-between text-sm text-slate-500">
+        <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 py-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm text-slate-500">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-800">
               Wise<span className="text-blue-600">Convert</span>
@@ -329,7 +330,7 @@ export default function HomePage() {
             © {new Date().getFullYear()}
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-5">
             <a className="hover:text-blue-600" href="#">
               Privacy
             </a>

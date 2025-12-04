@@ -6,19 +6,19 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       {/* Navbar */}
       <header className="border-b border-slate-200 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 h-20 flex items-center justify-between">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+          <a href="/" className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-base">
               W
             </div>
-            <span className="text-lg font-semibold tracking-tight">
+            <span className="text-2xl font-semibold tracking-tight">
               Wise<span className="text-blue-600">Convert</span>
             </span>
           </a>
 
           {/* Nav links */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
+          <nav className="hidden md:flex items-center gap-8 text-[15px] font-medium text-slate-600">
             <a href="#converter" className="hover:text-blue-600">
               Convert
             </a>
@@ -33,63 +33,60 @@ export default function HomePage() {
             </a>
           </nav>
 
-          {/* Right buttons */}
-          <div className="hidden md:flex items-center gap-3 text-sm font-medium">
-            <button className="px-3 py-1.5 rounded-lg hover:bg-slate-100">
+          <div className="hidden md:flex items-center gap-4 text-[15px] font-medium">
+            <button className="px-4 py-2 rounded-lg hover:bg-slate-100">
               Log in
             </button>
-            <button className="px-4 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+            <button className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
               Sign up
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main content */}
       <main className="flex-1">
-        {/* ===== File Converter 主區塊（含廣告配置） ===== */}
+        {/* ===== File Converter 主區塊 ===== */}
         <section
           id="converter"
           className="bg-slate-50 border-b border-slate-200"
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16">
             {/* Title */}
-            <div className="text-center mb-6 lg:mb-8">
-              <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">
+            <div className="text-center mb-10">
+              <h1 className="text-4xl sm:text-5xl font-semibold text-slate-900">
                 File Converter
               </h1>
-              <p className="mt-2 text-sm sm:text-base text-slate-500">
+              <p className="mt-4 text-lg text-slate-500">
                 Easily convert files from one format to another, online.
               </p>
             </div>
 
-            {/* 三欄：左廣告 / 中央轉檔工具 / 右廣告 */}
-            <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_260px] gap-4 lg:gap-6 items-start">
-              {/* 左側直式廣告（桌機才顯示） */}
+            {/* 三欄：左廣告 / 中央工具 / 右廣告 */}
+            <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)_280px] gap-6">
+              {/* 左側大廣告（桌機） */}
               <div className="hidden lg:block">
-                <div className="w-full h-[520px] rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-[11px] text-slate-400">
-                  AD SLOT L — 300×600
+                <div className="w-full h-[600px] rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
+                  AD SLOT LEFT — 300×600
                 </div>
               </div>
 
-              {/* 中央工具＋橫幅廣告 */}
-              <div className="space-y-4 lg:space-y-5">
+              {/* 中央內容 */}
+              <div className="space-y-6">
                 {/* 上方橫幅廣告 */}
-                <div className="w-full h-20 sm:h-24 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-[11px] text-slate-400">
+                <div className="w-full h-24 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
                   AD SLOT TOP — 970×90 / 728×90
                 </div>
 
-                {/* Uploader 主卡片 */}
-                <div className="rounded-2xl border border-slate-200 bg-white">
-                  {/* 大型 Dropzone */}
-                  <div className="border-b border-dashed border-slate-200 bg-slate-50/60">
-                    <div className="px-4 sm:px-8 py-10 sm:py-12">
+                {/* ===== Uploader Card ===== */}
+                <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                  {/* Dropzone */}
+                  <div className="border-b border-slate-200 bg-slate-50">
+                    <div className="px-6 sm:px-10 py-12 sm:py-16">
                       <div className="mx-auto max-w-xl">
-                        <div className="border-2 border-dashed border-slate-200 rounded-2xl bg-white/70 px-4 py-8 sm:px-8 sm:py-10 flex flex-col items-center justify-center text-center">
-                          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                        <div className="border-2 border-dashed border-slate-200 rounded-2xl bg-white/60 p-10 flex flex-col items-center text-center">
+                          <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4">
                             <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-7 h-7 text-blue-600"
+                              className="w-8 h-8 text-blue-600"
                               fill="none"
                               viewBox="0 0 24 24"
                               stroke="currentColor"
@@ -103,36 +100,35 @@ export default function HomePage() {
                             </svg>
                           </div>
 
-                          <p className="text-base sm:text-lg font-semibold text-slate-900">
+                          <p className="text-lg font-semibold text-slate-900">
                             Drag &amp; drop files here
                           </p>
-                          <p className="mt-1 text-xs sm:text-sm text-slate-500">
+                          <p className="mt-1 text-sm text-slate-500">
                             or{" "}
-                            <span className="text-blue-600 font-semibold">
+                            <span className="text-blue-600 font-semibold cursor-pointer">
                               Choose Files
                             </span>
                           </p>
 
-                          {/* 這裡未來可以改成你的 <FileUpload /> component */}
-                          <input type="file" multiple className="hidden" />
+                          <input type="file" className="hidden" />
 
-                          <p className="mt-3 text-[11px] sm:text-xs text-slate-400">
-                            Max file size 1GB. No watermarks. By proceeding,
-                            you agree to our Terms of Use.
+                          <p className="mt-4 text-xs text-slate-400">
+                            Max file size 1GB. No watermarks. By proceeding, you
+                            agree to our Terms of Use.
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* 下方設定列：格式選擇 + CTA */}
-                  <div className="px-4 sm:px-8 py-4 sm:py-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-                        <span className="font-medium text-slate-600">
+                  {/* 底部設定列 */}
+                  <div className="px-6 sm:px-10 py-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-slate-600">
                           Convert to
                         </span>
-                        <select className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:ring-blue-500">
                           <optgroup label="Images">
                             <option>JPG</option>
                             <option>PNG</option>
@@ -153,30 +149,29 @@ export default function HomePage() {
                         </select>
                       </div>
 
-                      <button className="inline-flex justify-center items-center rounded-lg bg-blue-600 text-white text-sm font-semibold px-6 py-2.5 hover:bg-blue-700">
+                      <button className="inline-flex justify-center items-center rounded-lg bg-blue-600 text-white text-sm font-semibold px-8 py-3 hover:bg-blue-700">
                         Start conversion
                       </button>
                     </div>
 
-                    {/* 檔案列表 placeholder：之後可以塞 ConversionQueue */}
                     <div className="mt-4 border-t border-slate-100 pt-3">
-                      <p className="text-xs text-slate-400">
+                      <p className="text-sm text-slate-400">
                         Your uploaded files will appear here.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* 下方橫幅廣告 */}
-                <div className="w-full h-20 sm:h-24 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-[11px] text-slate-400">
+                {/* 下方橫幅 */}
+                <div className="w-full h-24 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
                   AD SLOT BOTTOM — 970×90 / 728×90
                 </div>
               </div>
 
-              {/* 右側直式廣告（桌機才顯示） */}
+              {/* 右側大廣告 */}
               <div className="hidden lg:block">
-                <div className="w-full h-[520px] rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-[11px] text-slate-400">
-                  AD SLOT R — 300×600
+                <div className="w-full h-[600px] rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-xs text-slate-400">
+                  AD SLOT RIGHT — 300×600
                 </div>
               </div>
             </div>
@@ -184,58 +179,46 @@ export default function HomePage() {
         </section>
 
         {/* ===== Why WiseConvert ===== */}
-        <section
-          id="why"
-          className="py-10 lg:py-14 bg-white border-b border-slate-200"
-        >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-2xl mb-6">
-              <h2 className="text-xl sm:text-2xl font-semibold text-slate-900">
-                Why choose WiseConvert?
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                A modern conversion experience designed for speed, privacy and
-                simplicity.
-              </p>
-            </div>
+        <section id="why" className="py-14 bg-white border-b border-slate-200">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <h2 className="text-3xl font-semibold text-slate-900 mb-6">
+              Why choose WiseConvert?
+            </h2>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-4 text-lg">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-4 text-lg">
                   ⚡
                 </div>
-                <h3 className="text-sm font-semibold text-slate-900 mb-1.5">
+                <h3 className="text-base font-semibold text-slate-900 mb-2">
                   Fast cloud processing
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Files are processed on high-performance servers so you don’t
-                  have to worry about CPU usage or slow devices.
+                <p className="text-sm text-slate-500">
+                  High-performance servers convert your files quickly.
                 </p>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4 text-lg">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200">
+                <div className="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center mb-4 text-lg">
                   🔒
                 </div>
-                <h3 className="text-sm font-semibold text-slate-900 mb-1.5">
-                  Privacy-first by design
+                <h3 className="text-base font-semibold text-slate-900 mb-2">
+                  Privacy-first
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Your files are encrypted in transit. We never use your content
-                  for training and auto-delete after a short period.
+                <p className="text-sm text-slate-500">
+                  Files are encrypted and auto-deleted after a short period.
                 </p>
               </div>
 
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-4 text-lg">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-4 text-lg">
                   🧰
                 </div>
-                <h3 className="text-sm font-semibold text-slate-900 mb-1.5">
+                <h3 className="text-base font-semibold text-slate-900 mb-2">
                   All-in-one toolset
                 </h3>
-                <p className="text-xs text-slate-500">
-                  Replace dozens of small utilities with one unified interface
-                  for images, video, audio and documents.
+                <p className="text-sm text-slate-500">
+                  Convert images, videos, audio and documents in one place.
                 </p>
               </div>
             </div>
@@ -245,126 +228,91 @@ export default function HomePage() {
         {/* ===== How it works ===== */}
         <section
           id="how-it-works"
-          className="py-10 lg:py-14 bg-slate-50 border-b border-slate-200"
+          className="py-14 bg-slate-50 border-b border-slate-200"
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-2xl mb-6">
-              <h2 className="text-xl sm:text-2xl font-semibold text-slate-900">
-                How it works
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                A simple 4-step flow from upload to download.
-              </p>
-            </div>
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <h2 className="text-3xl font-semibold text-slate-900 mb-10">
+              How it works
+            </h2>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 {
                   step: 1,
                   title: "Upload your files",
-                  desc: "Drag & drop from your desktop or tap to browse from your device.",
+                  desc: "Browse or drag & drop.",
                 },
                 {
                   step: 2,
                   title: "Choose output format",
-                  desc: "Pick your desired format, like JPG, PNG, MP4, MP3 or PDF.",
+                  desc: "Pick JPG, MP4, PDF, MP3 and more.",
                 },
                 {
                   step: 3,
                   title: "Convert in the cloud",
-                  desc: "Our servers handle all the heavy lifting while you keep working.",
+                  desc: "Fast servers do the heavy work.",
                 },
                 {
                   step: 4,
-                  title: "Download & share",
-                  desc: "Get a clean, ready-to-use file you can download or share instantly.",
+                  title: "Download instantly",
+                  desc: "Your files will be ready in seconds.",
                 },
               ].map((item) => (
                 <div
                   key={item.step}
-                  className="p-5 rounded-2xl bg-white border border-slate-200"
+                  className="p-6 rounded-2xl bg-white border border-slate-200"
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-semibold">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center font-semibold">
                       {item.step}
                     </span>
-                    <h3 className="text-sm font-semibold text-slate-900">
+                    <h3 className="text-base font-semibold text-slate-900">
                       {item.title}
                     </h3>
                   </div>
-                  <p className="text-xs text-slate-500">{item.desc}</p>
+                  <p className="text-sm text-slate-500">{item.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ===== Pricing 簡單 teaser ===== */}
-        <section
-          id="pricing"
-          className="py-10 lg:py-14 bg-white border-b border-slate-200"
-        >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-2xl mb-6">
-              <h2 className="text-xl sm:text-2xl font-semibold text-slate-900">
-                Start free. Upgrade when you’re ready.
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Launch with a simple free tier today and add paid plans later.
-              </p>
-            </div>
+        {/* ===== Pricing ===== */}
+        <section id="pricing" className="py-14 bg-white">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <h2 className="text-3xl font-semibold text-slate-900 mb-8">
+              Start free. Upgrade later.
+            </h2>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Free */}
               <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200">
-                <h3 className="text-sm font-semibold text-slate-900 mb-1">
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">
                   Free
                 </h3>
-                <p className="text-xs text-slate-500 mb-4">
-                  Perfect for casual users and testing your funnel.
+                <p className="text-sm text-slate-500 mb-4">
+                  Ideal for most users.
                 </p>
-                <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-2xl font-semibold text-slate-900">
-                    $0
-                  </span>
-                  <span className="text-xs text-slate-500">/month</span>
-                </div>
-                <ul className="space-y-2 text-xs text-slate-600 mb-5">
-                  <li>✓ Up to 1 GB per file</li>
+                <p className="text-3xl font-bold">$0</p>
+                <ul className="mt-4 space-y-2 text-sm text-slate-600">
+                  <li>✓ 1GB max file size</li>
                   <li>✓ Standard conversion speed</li>
-                  <li>✓ Limited daily conversions</li>
-                  <li>✓ All basic tools</li>
+                  <li>✓ Basic tools</li>
                 </ul>
-                <button className="w-full py-2 rounded-lg border border-slate-200 text-sm font-semibold hover:bg-slate-100">
-                  Continue with Free
-                </button>
               </div>
 
               {/* Pro */}
-              <div className="p-6 rounded-2xl bg-slate-900 text-slate-50 border border-slate-900 relative overflow-hidden">
-                <div className="absolute -right-10 -top-10 w-24 h-24 rounded-full bg-blue-600/40 pointer-events-none" />
-                <h3 className="text-sm font-semibold mb-1 flex items-center gap-2">
-                  Pro
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500 text-white">
-                    Coming soon
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-300 mb-4">
-                  For marketers, creators and power users who need more.
+              <div className="p-6 rounded-2xl bg-slate-900 text-slate-100">
+                <h3 className="text-lg font-semibold mb-2">Pro</h3>
+                <p className="text-sm text-slate-300 mb-4">
+                  Coming soon — for power users.
                 </p>
-                <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-2xl font-semibold">$19</span>
-                  <span className="text-xs text-slate-400">/month</span>
-                </div>
-                <ul className="space-y-2 text-xs text-slate-200 mb-5">
-                  <li>✓ Faster conversion queue</li>
-                  <li>✓ Larger file sizes</li>
-                  <li>✓ Higher daily limits</li>
+                <p className="text-3xl font-bold">$19</p>
+                <ul className="mt-4 space-y-2 text-sm text-slate-200">
+                  <li>✓ Faster conversions</li>
+                  <li>✓ Higher file limits</li>
                   <li>✓ Priority support</li>
                 </ul>
-                <button className="w-full py-2 rounded-lg bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600">
-                  Join waitlist
-                </button>
               </div>
             </div>
           </div>
@@ -373,23 +321,22 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8 flex flex-col sm:flex-row justify-between text-sm text-slate-500">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-800">
               Wise<span className="text-blue-600">Convert</span>
             </span>
-            <span>
-              © {new Date().getFullYear()} All rights reserved.
-            </span>
+            © {new Date().getFullYear()}
           </div>
-          <div className="flex items-center gap-4">
-            <a href="#" className="hover:text-blue-600">
+
+          <div className="flex items-center gap-6">
+            <a className="hover:text-blue-600" href="#">
               Privacy
             </a>
-            <a href="#" className="hover:text-blue-600">
+            <a className="hover:text-blue-600" href="#">
               Terms
             </a>
-            <a href="#" className="hover:text-blue-600">
+            <a className="hover:text-blue-600" href="#">
               Contact
             </a>
           </div>

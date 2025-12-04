@@ -222,6 +222,67 @@ export default function HomePage() {
 </section>
 
 
+        {/* 🟡 Ad Slot 3 – 文章區中間 970x250 / 728x90 */}
+        <section className="py-4 bg-slate-50 border-t border-b border-slate-200">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="h-24 sm:h-32 rounded-xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-[11px] text-slate-400">
+              AD SLOT #3 — 970×250 or 728×90 (in-content banner)
+            </div>
+          </div>
+        </section>
+
+        {/* Top tools */}
+        <section
+          id="tools"
+          className="py-10 lg:py-14 border-b border-slate-200 bg-white"
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-end justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-semibold text-slate-900">
+                  Popular conversion tools
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Quick access to the most common file conversions.
+                </p>
+              </div>
+              <a
+                href="#"
+                className="hidden sm:inline-flex text-xs font-semibold text-blue-600 hover:text-blue-700"
+              >
+                View all tools →
+              </a>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Tool cards 略，跟前一版相同 */}
+              {/* 你可以照需要增加或修改工具卡片 */}
+              {/* 下面只是範例其中一個，其他你可以複製改文字 */}
+              <a className="group p-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-blue-200 transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-[11px] font-semibold text-blue-700">
+                      IMG
+                    </div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      JPG to PNG
+                    </h3>
+                  </div>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">
+                    Image
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Preserve quality while converting JPG photos to PNG in
+                  seconds.
+                </p>
+              </a>
+
+              {/* …其餘工具卡片你可以重複上面 pattern */}
+            </div>
+          </div>
+        </section>
+
         {/* Features */}
         <section id="features" className="py-12 lg:py-16 bg-slate-50">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

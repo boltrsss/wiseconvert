@@ -4,6 +4,7 @@ import { tools } from "@/data/tools";
 import { AdSlot } from "@/components/AdSlot";
 import FileUpload from "@/components/FileUpload"; // 你有自己的上傳元件可以替換
 import React from "react";
+export const runtime = "edge";
 
 export async function generateMetadata({ params }: { params: any }) {
   const tool = tools.find(t => t.slug === params.slug);

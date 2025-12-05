@@ -12,7 +12,7 @@ import { UploadItem, UploadStatus } from "@/types/files";
 
 type FileUploadProps = {
   inputFormat?: string;   // 顯示用，例如 "JPG"
-  outputFormat?: string;  // 真正要轉成的格式，例如 "PNG"
+  outputFormat?: string;  // 真正輸出格式，例如 "PNG"
 };
 
 export default function FileUpload({
@@ -51,14 +51,14 @@ export default function FileUpload({
     try {
       updateItem(item.id, { status: "uploading", progress: 0 });
 
-      // 1. 拿 presigned URL
+      // 1. 拿上傳 URL
       const uploadInfo = await getUploadUrl(item.file);
 
       // 2. 上傳到 S3
       await uploadFileToS3(item.file, uploadInfo.upload_url);
       updateItem(item.id, { status: "processing", progress: 10 });
 
-      // 3. 呼叫轉檔 API：格式由 props.outputFormat 決定
+      // 3. 呼叫轉檔 API，格式由 props 決定
       const targetFormat = (outputFormat || "png").toLowerCase();
       const { job_id } = await startConversion(uploadInfo.key, targetFormat);
 
@@ -214,7 +214,7 @@ export default function FileUpload({
                   </div>
                 </div>
 
-                {/* 之後 status API 有回傳 download_url 就會自動顯示 */}
+                {/* 之後 status API 有 download_url 就會自動顯示 */}
                 {item.status === "done" && downloadUrl && (
                   <a
                     href={downloadUrl}

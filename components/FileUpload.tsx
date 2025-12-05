@@ -10,12 +10,9 @@ import {
 } from "@/lib/api";
 import { UploadItem, UploadStatus } from "@/types/files";
 
-const API_BASE = "/api";
-console.log("[FileUpload] API_BASE =", API_BASE);
-
 type FileUploadProps = {
-  inputFormat?: string;   // e.g. "JPG"
-  outputFormat?: string;  // e.g. "PNG" (初始預設)
+  inputFormat?: string;   // 顯示用，例如 "JPG"
+  outputFormat?: string;  // 真正要轉成的格式，例如 "PNG"
 };
 
 export default function FileUpload({
@@ -25,11 +22,6 @@ export default function FileUpload({
   const [items, setItems] = useState<UploadItem[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  // 全局 Output format（使用者可改）
-  const [selectedFormat, setSelectedFormat] = useState(
-    (outputFormat || "png").toLowerCase()
-  );
 
   const addItem = (file: File): UploadItem => {
     const id = crypto.randomUUID();
@@ -55,37 +47,26 @@ export default function FileUpload({
     );
   };
 
-  // 多帶一個 format 進來，確保每個檔案用當下選到的格式
-  const runJobPipeline = async (item: UploadItem, format: string) => {
+  const runJobPipeline = async (item: UploadItem) => {
     try {
-      console.log("[pipeline] start for", item.name);
-
       updateItem(item.id, { status: "uploading", progress: 0 });
 
       // 1. 拿 presigned URL
       const uploadInfo = await getUploadUrl(item.file);
-      console.log("[pipeline] got upload URL", uploadInfo);
 
       // 2. 上傳到 S3
       await uploadFileToS3(item.file, uploadInfo.upload_url);
-      console.log("[pipeline] uploaded to S3");
-
       updateItem(item.id, { status: "processing", progress: 10 });
 
-      // 3. 呼叫轉檔 API
-      const targetFormat = (format || "png").toLowerCase();
+      // 3. 呼叫轉檔 API：格式由 props.outputFormat 決定
+      const targetFormat = (outputFormat || "png").toLowerCase();
       const { job_id } = await startConversion(uploadInfo.key, targetFormat);
-
-      console.log("[pipeline] job started", job_id);
 
       updateItem(item.id, { jobId: job_id, status: "processing" });
 
-      // 4. 定時 polling
+      // 4. polling 狀態
       const poll = async (): Promise<void> => {
-        console.log("[pipeline] polling", job_id);
         const res: StatusResponse = await getJobStatus(job_id);
-
-        console.log("[pipeline] status", res);
 
         if (res.status === "completed") {
           const anyRes = res as any;
@@ -102,10 +83,7 @@ export default function FileUpload({
         }
 
         if (res.status === "failed" || res.status === "error") {
-          updateItem(item.id, {
-            status: "error",
-            progress: 100,
-          });
+          updateItem(item.id, { status: "error", progress: 100 });
           return;
         }
 
@@ -121,25 +99,17 @@ export default function FileUpload({
       setTimeout(poll, 3000);
     } catch (err) {
       console.error("[pipeline] error", err);
-      updateItem(item.id, {
-        status: "error",
-        progress: 100,
-      });
+      updateItem(item.id, { status: "error", progress: 100 });
     }
   };
 
-  const handleFiles = useCallback(
-    (files: FileList | File[]) => {
-      const list = Array.from(files);
-      const formatForThisBatch = selectedFormat; // 這批檔案用當下選到的格式
-
-      for (const file of list) {
-        const item = addItem(file);
-        void runJobPipeline(item, formatForThisBatch);
-      }
-    },
-    [selectedFormat]
-  );
+  const handleFiles = useCallback((files: FileList | File[]) => {
+    const list = Array.from(files);
+    for (const file of list) {
+      const item = addItem(file);
+      void runJobPipeline(item);
+    }
+  }, []);
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
     e.preventDefault();
@@ -148,7 +118,6 @@ export default function FileUpload({
 
     const dt = e.dataTransfer;
     if (!dt) return;
-
     if (dt.files && dt.files.length > 0) {
       handleFiles(dt.files);
     }
@@ -166,9 +135,7 @@ export default function FileUpload({
     setIsDragging(false);
   };
 
-  const onFileInputChange: React.ChangeEventHandler<HTMLInputElement> = (
-    e
-  ) => {
+  const onFileInputChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       handleFiles(files);
@@ -176,11 +143,7 @@ export default function FileUpload({
     }
   };
 
-  const displayOutput = selectedFormat.toUpperCase();
-
-  const onFormatChange: React.ChangeEventHandler<HTMLSelectElement> = (e) => {
-    setSelectedFormat(e.target.value.toLowerCase());
-  };
+  const displayOutput = (outputFormat || "png").toUpperCase();
 
   return (
     <div className="w-full flex flex-col gap-6">
@@ -209,38 +172,8 @@ export default function FileUpload({
               ? `Convert ${inputFormat} files to ${displayOutput}.`
               : `Files will be converted to ${displayOutput}.`}
           </p>
-
-          {/* Output format 選單（點選時要阻止冒泡，不然會觸發選檔） */}
-          <div
-            className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-500"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <span>Output format:</span>
-            <select
-              className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white"
-              value={selectedFormat}
-              onChange={onFormatChange}
-            >
-              <optgroup label="Images">
-                <option value="jpg">JPG</option>
-                <option value="png">PNG</option>
-                <option value="webp">WEBP</option>
-                <option value="heic">HEIC</option>
-              </optgroup>
-              <optgroup label="Videos">
-                <option value="mp4">MP4</option>
-                <option value="mov">MOV</option>
-              </optgroup>
-              <optgroup label="Audio">
-                <option value="mp3">MP3</option>
-                <option value="wav">WAV</option>
-              </optgroup>
-              <optgroup label="Documents">
-                <option value="pdf">PDF</option>
-              </optgroup>
-            </select>
-          </div>
         </div>
+
         <input
           ref={inputRef}
           type="file"
@@ -271,8 +204,7 @@ export default function FileUpload({
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{item.name}</div>
                   <div className="text-xs text-gray-400">
-                    {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
-                    {item.status}
+                    {(item.size / (1024 * 1024)).toFixed(2)} MB · {item.status}
                   </div>
                   <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                     <div
@@ -282,7 +214,7 @@ export default function FileUpload({
                   </div>
                 </div>
 
-                {/* 右側 Download 按鈕（完成時顯示） */}
+                {/* 之後 status API 有回傳 download_url 就會自動顯示 */}
                 {item.status === "done" && downloadUrl && (
                   <a
                     href={downloadUrl}

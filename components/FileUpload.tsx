@@ -15,7 +15,7 @@ console.log("[FileUpload] API_BASE =", API_BASE);
 
 type FileUploadProps = {
   inputFormat?: string;   // e.g. "JPG"
-  outputFormat?: string;  // e.g. "PNG"
+  outputFormat?: string;  // e.g. "PNG" (初始預設)
 };
 
 export default function FileUpload({
@@ -25,6 +25,11 @@ export default function FileUpload({
   const [items, setItems] = useState<UploadItem[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // 全局 Output format（使用者可改）
+  const [selectedFormat, setSelectedFormat] = useState(
+    (outputFormat || "png").toLowerCase()
+  );
 
   const addItem = (file: File): UploadItem => {
     const id = crypto.randomUUID();
@@ -50,7 +55,8 @@ export default function FileUpload({
     );
   };
 
-  const runJobPipeline = async (item: UploadItem) => {
+  // 多帶一個 format 進來，確保每個檔案用當下選到的格式
+  const runJobPipeline = async (item: UploadItem, format: string) => {
     try {
       console.log("[pipeline] start for", item.name);
 
@@ -67,7 +73,7 @@ export default function FileUpload({
       updateItem(item.id, { status: "processing", progress: 10 });
 
       // 3. 呼叫轉檔 API
-      const targetFormat = (outputFormat || "png").toLowerCase();
+      const targetFormat = (format || "png").toLowerCase();
       const { job_id } = await startConversion(uploadInfo.key, targetFormat);
 
       console.log("[pipeline] job started", job_id);
@@ -82,7 +88,6 @@ export default function FileUpload({
         console.log("[pipeline] status", res);
 
         if (res.status === "completed") {
-          // 嘗試從 API 拿 download URL（如果有）
           const anyRes = res as any;
           const downloadUrlFromApi =
             anyRes.download_url ?? anyRes.output_url ?? null;
@@ -104,7 +109,6 @@ export default function FileUpload({
           return;
         }
 
-        // 還在處理中 → 再等一下
         const nextProgress = Math.min(
           95,
           (res.progress ?? 0) || 20
@@ -127,13 +131,14 @@ export default function FileUpload({
   const handleFiles = useCallback(
     (files: FileList | File[]) => {
       const list = Array.from(files);
+      const formatForThisBatch = selectedFormat; // 這批檔案用當下選到的格式
+
       for (const file of list) {
         const item = addItem(file);
-        // 直接啟動 pipeline
-        void runJobPipeline(item);
+        void runJobPipeline(item, formatForThisBatch);
       }
     },
-    [] // runJobPipeline 沒包在 useCallback, 這裡就不要放進 dep
+    [selectedFormat]
   );
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
@@ -171,7 +176,11 @@ export default function FileUpload({
     }
   };
 
-  const displayOutput = (outputFormat || "png").toUpperCase();
+  const displayOutput = selectedFormat.toUpperCase();
+
+  const onFormatChange: React.ChangeEventHandler<HTMLSelectElement> = (e) => {
+    setSelectedFormat(e.target.value.toLowerCase());
+  };
 
   return (
     <div className="w-full flex flex-col gap-6">
@@ -200,6 +209,37 @@ export default function FileUpload({
               ? `Convert ${inputFormat} files to ${displayOutput}.`
               : `Files will be converted to ${displayOutput}.`}
           </p>
+
+          {/* Output format 選單（點選時要阻止冒泡，不然會觸發選檔） */}
+          <div
+            className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-500"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span>Output format:</span>
+            <select
+              className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white"
+              value={selectedFormat}
+              onChange={onFormatChange}
+            >
+              <optgroup label="Images">
+                <option value="jpg">JPG</option>
+                <option value="png">PNG</option>
+                <option value="webp">WEBP</option>
+                <option value="heic">HEIC</option>
+              </optgroup>
+              <optgroup label="Videos">
+                <option value="mp4">MP4</option>
+                <option value="mov">MOV</option>
+              </optgroup>
+              <optgroup label="Audio">
+                <option value="mp3">MP3</option>
+                <option value="wav">WAV</option>
+              </optgroup>
+              <optgroup label="Documents">
+                <option value="pdf">PDF</option>
+              </optgroup>
+            </select>
+          </div>
         </div>
         <input
           ref={inputRef}
@@ -221,9 +261,7 @@ export default function FileUpload({
         <ul className="space-y-3">
           {items.map((item) => {
             const anyItem = item as any;
-            const downloadUrl = anyItem.downloadUrl as
-              | string
-              | undefined;
+            const downloadUrl = anyItem.downloadUrl as string | undefined;
 
             return (
               <li

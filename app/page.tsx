@@ -1,6 +1,7 @@
 // app/page.tsx
 import React from "react";
 import { AdSlot } from "@/components/AdSlot"; // 如果 @ 無法用，換成 "../components/AdSlot"
+import FileUpload from "../components/FileUpload";
 
 export default function HomePage() {
   return (
@@ -92,90 +93,10 @@ export default function HomePage() {
                   className="hidden lg:flex h-20"
                 />
 
-                {/* ===== Uploader Card ===== */}
-                <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                  {/* Dropzone */}
-                  <div className="border-b border-slate-200 bg-slate-50">
-                    <div className="px-6 sm:px-10 py-10 sm:py-12">
-                      <div className="mx-auto max-w-xl">
-                        <div className="border-2 border-dashed border-slate-200 rounded-2xl bg-white/60 px-6 py-10 sm:px-10 sm:py-12 flex flex-col items-center text-center">
-                          <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                            <svg
-                              className="w-8 h-8 text-blue-600"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1.8}
-                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M16 8l-4-4m0 0L8 8m4-4v12"
-                              />
-                            </svg>
-                          </div>
-
-                          <p className="text-lg font-semibold text-slate-900">
-                            Drag &amp; drop files here
-                          </p>
-                          <p className="mt-1 text-sm text-slate-500">
-                            or{" "}
-                            <span className="text-blue-600 font-semibold cursor-pointer">
-                              Choose Files
-                            </span>
-                          </p>
-
-                          {/* 之後你可以用自己的 <FileUpload /> / <UploadDropzone /> */}
-                          <input type="file" className="hidden" />
-
-                          <p className="mt-4 text-xs text-slate-400">
-                            Max file size 1GB. No watermarks. By proceeding,
-                            you agree to our Terms of Use.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 底部設定列 */}
-                  <div className="px-6 sm:px-10 py-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-slate-600">
-                          Convert to
-                        </span>
-                        <select className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:ring-blue-500 focus:outline-none">
-                          <optgroup label="Images">
-                            <option>JPG</option>
-                            <option>PNG</option>
-                            <option>WEBP</option>
-                            <option>HEIC</option>
-                          </optgroup>
-                          <optgroup label="Videos">
-                            <option>MP4</option>
-                            <option>MOV</option>
-                          </optgroup>
-                          <optgroup label="Audio">
-                            <option>MP3</option>
-                            <option>WAV</option>
-                          </optgroup>
-                          <optgroup label="Documents">
-                            <option>PDF</option>
-                          </optgroup>
-                        </select>
-                      </div>
-
-                      <button className="inline-flex justify-center items-center rounded-lg bg-blue-600 text-white text-sm font-semibold px-8 py-2.5 hover:bg-blue-700">
-                        Start conversion
-                      </button>
-                    </div>
-
-                    <div className="mt-4 border-t border-slate-100 pt-3">
-                      <p className="text-sm text-slate-400">
-                        Your uploaded files will appear here.
-                      </p>
-                    </div>
-                  </div>
+                {/* ===== Uploader Card（改成真正的 FileUpload） ===== */}
+                <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm px-4 sm:px-8 py-6">
+                  {/* 這裡直接用有功能的 FileUpload 元件 */}
+                  <FileUpload />
                 </div>
 
                 {/* 手機版：內容中間一個 banner（桌機隱藏） */}
@@ -267,7 +188,7 @@ export default function HomePage() {
               How it works
             </h2>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 {
                   step: 1,

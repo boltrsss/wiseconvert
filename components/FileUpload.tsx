@@ -14,7 +14,7 @@ const API_BASE = "/api";
 console.log("[FileUpload] API_BASE =", API_BASE);
 
 type FileUploadProps = {
-  inputFormat?: string;   // e.g. "JPG"（目前先保留，以後可用在 UI）
+  inputFormat?: string;   // e.g. "JPG"
   outputFormat?: string;  // e.g. "PNG"
 };
 
@@ -44,7 +44,7 @@ export default function FileUpload({
     return item;
   };
 
-  const updateItem = (id: string, patch: Partial<UploadItem>) => {
+  const updateItem = (id: string, patch: Partial<UploadItem> | any) => {
     setItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, ...patch } : it))
     );
@@ -82,11 +82,17 @@ export default function FileUpload({
         console.log("[pipeline] status", res);
 
         if (res.status === "completed") {
+          // 嘗試從 API 拿 download URL（如果有）
+          const anyRes = res as any;
+          const downloadUrlFromApi =
+            anyRes.download_url ?? anyRes.output_url ?? null;
+
           updateItem(item.id, {
             status: "done",
             progress: 100,
             outputKey: res.output_s3_key,
-          });
+            ...(downloadUrlFromApi ? { downloadUrl: downloadUrlFromApi } : {}),
+          } as any);
           return;
         }
 
@@ -98,6 +104,7 @@ export default function FileUpload({
           return;
         }
 
+        // 還在處理中 → 再等一下
         const nextProgress = Math.min(
           95,
           (res.progress ?? 0) || 20
@@ -122,10 +129,11 @@ export default function FileUpload({
       const list = Array.from(files);
       for (const file of list) {
         const item = addItem(file);
+        // 直接啟動 pipeline
         void runJobPipeline(item);
       }
     },
-    [runJobPipeline]
+    [] // runJobPipeline 沒包在 useCallback, 這裡就不要放進 dep
   );
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
@@ -211,26 +219,45 @@ export default function FileUpload({
           </p>
         )}
         <ul className="space-y-3">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center justify-between gap-4 text-sm"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{item.name}</div>
-                <div className="text-xs text-gray-400">
-                  {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
-                  {item.status}
+          {items.map((item) => {
+            const anyItem = item as any;
+            const downloadUrl = anyItem.downloadUrl as
+              | string
+              | undefined;
+
+            return (
+              <li
+                key={item.id}
+                className="flex items-center justify-between gap-4 text-sm"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{item.name}</div>
+                  <div className="text-xs text-gray-400">
+                    {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
+                    {item.status}
+                  </div>
+                  <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-2 bg-blue-500 transition-all"
+                      style={{ width: `${item.progress ?? 0}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-2 bg-blue-500 transition-all"
-                    style={{ width: `${item.progress ?? 0}%` }}
-                  />
-                </div>
-              </div>
-            </li>
-          ))}
+
+                {/* 右側 Download 按鈕（完成時顯示） */}
+                {item.status === "done" && downloadUrl && (
+                  <a
+                    href={downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Download
+                  </a>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

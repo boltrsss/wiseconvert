@@ -1,11 +1,11 @@
 // data/tools.ts
 
 export interface ToolDefinition {
-  slug: string;          // 網址，如 jpg-to-png
-  input: string;         // 輸入格式 JPG
-  output: string;        // 輸出格式 PNG
-  title: string;         // SEO + H1
-  description: string;   // SEO meta description
+  slug: string;       // URL: /convert/[slug]
+  input: string;      // 顯示用
+  output: string;     // 真正輸出格式
+  title: string;
+  description: string;
 }
 
 export const tools: ToolDefinition[] = [
@@ -22,5 +22,6 @@ export const tools: ToolDefinition[] = [
     output: "JPG",
     title: "PNG to JPG Converter",
     description: "Turn PNG images into JPG instantly with high quality.",
-  }
+  },
+  // 之後要加 500 個，就繼續在這裡加
 ];

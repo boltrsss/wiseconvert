@@ -70,8 +70,9 @@ export default function FileUpload({
 
         if (res.status === "completed") {
           const anyRes = res as any;
+          // 👇 這裡多看 file_url
           const downloadUrlFromApi =
-            anyRes.download_url ?? anyRes.output_url ?? null;
+            anyRes.file_url ?? anyRes.download_url ?? anyRes.output_url ?? null;
 
           updateItem(item.id, {
             status: "done",
@@ -214,7 +215,7 @@ export default function FileUpload({
                   </div>
                 </div>
 
-                {/* 之後 status API 有 download_url 就會自動顯示 */}
+                {/* status API 有 downloadUrl 就會顯示 */}
                 {item.status === "done" && downloadUrl && (
                   <a
                     href={downloadUrl}

@@ -12,7 +12,7 @@ import { UploadItem, UploadStatus } from "@/types/files";
 
 type FileUploadProps = {
   inputFormat?: string;   // 顯示用，例如 "JPG"
-  outputFormat?: string;  // 真正輸出格式，例如 "PNG"
+  outputFormat?: string;  // 預設輸出格式，例如 "PNG"
 };
 
 export default function FileUpload({
@@ -22,6 +22,11 @@ export default function FileUpload({
   const [items, setItems] = useState<UploadItem[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // ✅ 目前選擇的輸出格式（小寫），預設來自 props
+  const [currentFormat, setCurrentFormat] = useState(
+    (outputFormat || "png").toLowerCase()
+  );
 
   const addItem = (file: File): UploadItem => {
     const id = crypto.randomUUID();
@@ -58,8 +63,8 @@ export default function FileUpload({
       await uploadFileToS3(item.file, uploadInfo.upload_url);
       updateItem(item.id, { status: "processing", progress: 10 });
 
-      // 3. 呼叫轉檔 API，格式由 props 決定
-      const targetFormat = (outputFormat || "png").toLowerCase();
+      // 3. 呼叫轉檔 API，格式由「目前選擇的輸出格式」決定
+      const targetFormat = (currentFormat || "png").toLowerCase();
       const { job_id } = await startConversion(uploadInfo.key, targetFormat);
 
       updateItem(item.id, { jobId: job_id, status: "processing" });
@@ -70,7 +75,7 @@ export default function FileUpload({
 
         if (res.status === "completed") {
           const anyRes = res as any;
-          // 👇 這裡多看 file_url
+          // 🔥 優先使用後端回傳的 file_url（已是 presigned）
           const downloadUrlFromApi =
             anyRes.file_url ?? anyRes.download_url ?? anyRes.output_url ?? null;
 
@@ -88,10 +93,7 @@ export default function FileUpload({
           return;
         }
 
-        const nextProgress = Math.min(
-          95,
-          (res.progress ?? 0) || 20
-        );
+        const nextProgress = Math.min(95, (res.progress ?? 0) || 20);
         updateItem(item.id, { progress: nextProgress });
 
         setTimeout(poll, 3000);
@@ -110,7 +112,7 @@ export default function FileUpload({
       const item = addItem(file);
       void runJobPipeline(item);
     }
-  }, []);
+  }, [runJobPipeline]); // 如果 TS 抱怨，先移除這個依賴也沒關係
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
     e.preventDefault();
@@ -144,7 +146,10 @@ export default function FileUpload({
     }
   };
 
-  const displayOutput = (outputFormat || "png").toUpperCase();
+  const displayOutput = currentFormat.toUpperCase();
+
+  // 這裡是給使用者可以選的輸出格式（之後要加更多很容易）
+  const formatOptions = ["png", "jpg", "webp", "pdf"];
 
   return (
     <div className="w-full flex flex-col gap-6">
@@ -173,6 +178,25 @@ export default function FileUpload({
               ? `Convert ${inputFormat} files to ${displayOutput}.`
               : `Files will be converted to ${displayOutput}.`}
           </p>
+
+          {/* ✅ 輸出格式選擇器 */}
+          <div
+            className="mt-2 flex items-center gap-2 text-xs text-gray-600"
+            onClick={(e) => e.stopPropagation()} // 避免點 select 觸發上傳
+          >
+            <span>Output format:</span>
+            <select
+              value={currentFormat}
+              onChange={(e) => setCurrentFormat(e.target.value)}
+              className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white"
+            >
+              {formatOptions.map((fmt) => (
+                <option key={fmt} value={fmt}>
+                  {fmt.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <input
@@ -205,7 +229,8 @@ export default function FileUpload({
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{item.name}</div>
                   <div className="text-xs text-gray-400">
-                    {(item.size / (1024 * 1024)).toFixed(2)} MB · {item.status}
+                    {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
+                    {item.status}
                   </div>
                   <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                     <div
@@ -215,7 +240,7 @@ export default function FileUpload({
                   </div>
                 </div>
 
-                {/* status API 有 downloadUrl 就會顯示 */}
+                {/* 轉檔完成才顯示 Download */}
                 {item.status === "done" && downloadUrl && (
                   <a
                     href={downloadUrl}

@@ -9,14 +9,14 @@ import {
   type StatusResponse,
 } from "@/lib/api";
 import { UploadItem, UploadStatus } from "@/types/files";
+import { detectLang, errorMessages } from "@/lib/errorMessages";
 
 type FileUploadProps = {
   inputFormat?: string;   // 顯示用，例如 "JPG"
   outputFormat?: string;  // 預設輸出格式，例如 "PNG"
 };
 
-// 可選的輸出格式（之後可以依工具類型再細分）
-const BASE_OUTPUT_FORMATS = ["png", "jpg", "webp", "pdf"];
+const OUTPUT_OPTIONS = ["png", "jpg", "jpeg", "webp"];
 
 export default function FileUpload({
   inputFormat,
@@ -25,20 +25,15 @@ export default function FileUpload({
   const [items, setItems] = useState<UploadItem[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [errorBanner, setErrorBanner] = useState<string | null>(null);
+  const [globalError, setGlobalError] = useState<string | null>(null);
 
-  // 目前選擇的輸出格式（影響之後上傳的檔案）
-  const [selectedFormat, setSelectedFormat] = useState(
+  // 語系偵測（zh / en）
+  const [lang] = useState<"en" | "zh">(() => detectLang());
+  const t = (key: keyof typeof errorMessages) => errorMessages[key][lang];
+
+  // 全域輸出格式選單（預設用 props）
+  const [selectedOutput, setSelectedOutput] = useState(
     (outputFormat || "png").toLowerCase()
-  );
-
-  // 下拉選單中顯示的可選格式（包含 page 傳進來的 outputFormat）
-  const availableFormats = Array.from(
-    new Set(
-      [outputFormat, ...BASE_OUTPUT_FORMATS]
-        .filter(Boolean)
-        .map((f) => f!.toLowerCase())
-    )
   );
 
   const addItem = (file: File): UploadItem => {
@@ -53,37 +48,56 @@ export default function FileUpload({
       isVideo: file.type.startsWith("video/"),
       status: "waiting" as UploadStatus,
       progress: 0,
-      outputFormat: selectedFormat, // ⭐ 必填，修正 Cloudflare build error
+      outputFormat: selectedOutput,
     };
 
     setItems((prev) => [...prev, item]);
     return item;
   };
 
-  const updateItem = (id: string, patch: Partial<UploadItem>) => {
+  const updateItem = (id: string, patch: Partial<UploadItem> | any) => {
     setItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, ...patch } : it))
     );
   };
 
+  const handleUnsupportedFormat = (itemId: string) => {
+    const msg = t("unsupportedFormat");
+    updateItem(itemId, {
+      status: "error",
+      progress: 100,
+      errorMessage: msg,
+    });
+    setGlobalError(msg);
+  };
+
   const runJobPipeline = async (item: UploadItem) => {
     try {
+      // 快速擋掉 AVIF（不用丟到後端）
+      const ext = item.name.split(".").pop()?.toLowerCase();
+      if (ext === "avif") {
+        handleUnsupportedFormat(item.id);
+        return;
+      }
+
       updateItem(item.id, { status: "uploading", progress: 0 });
 
-      // 1. 取得上傳 URL
+      // 1. 拿上傳 URL
       const uploadInfo = await getUploadUrl(item.file);
 
       // 2. 上傳到 S3
       await uploadFileToS3(item.file, uploadInfo.upload_url);
       updateItem(item.id, { status: "processing", progress: 10 });
 
-      // 3. 呼叫轉檔 API，使用當時記錄在 item 裡的 outputFormat
-      const targetFormat = (item.outputFormat || selectedFormat || "png").toLowerCase();
+      // 3. 呼叫轉檔 API，使用每個 item 自己的 outputFormat
+      const targetFormat = (
+        item.outputFormat || selectedOutput || "png"
+      ).toLowerCase();
       const { job_id } = await startConversion(uploadInfo.key, targetFormat);
 
       updateItem(item.id, { jobId: job_id, status: "processing" });
 
-      // 4. Polling 狀態
+      // 4. polling 狀態
       const poll = async (): Promise<void> => {
         const res: StatusResponse = await getJobStatus(job_id);
 
@@ -97,45 +111,31 @@ export default function FileUpload({
             progress: 100,
             outputKey: res.output_s3_key,
             ...(downloadUrlFromApi ? { downloadUrl: downloadUrlFromApi } : {}),
-            errorMessage: undefined,
           });
           return;
         }
 
         if (res.status === "failed" || res.status === "error") {
-          const anyRes = res as any;
-          const rawMsg =
-            anyRes.message ||
-            anyRes.error ||
-            "轉檔失敗，請稍後再試。";
+          const rawMsg = (res as any).message as string | undefined;
+          const isUnsupported =
+            rawMsg?.toLowerCase().includes("ffmpeg") ||
+            rawMsg?.toLowerCase().includes("unsupported") ||
+            rawMsg?.toLowerCase().includes("invalid data");
 
-          let friendly = "轉檔失敗，請稍後再試。";
-          const lowerMsg = String(rawMsg).toLowerCase();
-          const lowerName = item.name.toLowerCase();
-
-          const isAvif =
-            lowerName.endsWith(".avif") ||
-            item.type === "image/avif" ||
-            lowerMsg.includes("avif");
-
-          // 🔔 特別處理 AVIF 不支援情況
-          if (isAvif && lowerMsg.includes("ffmpeg version")) {
-            friendly = "目前不支援 AVIF 轉檔，請改用 PNG / JPG。";
-            setErrorBanner(friendly);
-          }
+          const msg = isUnsupported
+            ? t("unsupportedFormat")
+            : t("conversionFailed");
 
           updateItem(item.id, {
             status: "error",
             progress: 100,
-            errorMessage: friendly,
+            errorMessage: msg,
           });
+          setGlobalError(msg);
           return;
         }
 
-        const nextProgress = Math.min(
-          95,
-          (res.progress ?? 0) || 20
-        );
+        const nextProgress = Math.min(95, (res.progress ?? 0) || 20);
         updateItem(item.id, { progress: nextProgress });
 
         setTimeout(poll, 3000);
@@ -144,26 +144,26 @@ export default function FileUpload({
       setTimeout(poll, 3000);
     } catch (err) {
       console.error("[pipeline] error", err);
+      const msg = t("conversionFailed");
       updateItem(item.id, {
         status: "error",
         progress: 100,
-        errorMessage: "發生未知錯誤，請稍後再試。",
+        errorMessage: msg,
       });
+      setGlobalError(msg);
     }
   };
 
   const handleFiles = useCallback(
     (files: FileList | File[]) => {
-      // 新上傳時，先清掉舊的 banner
-      setErrorBanner(null);
-
       const list = Array.from(files);
       for (const file of list) {
         const item = addItem(file);
         void runJobPipeline(item);
       }
     },
-    [runJobPipeline] // eslint 在本地會提醒，但在 CF build 不會出錯
+    // 依賴輸出格式 & 語系
+    [selectedOutput, lang]
   );
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
@@ -198,20 +198,59 @@ export default function FileUpload({
     }
   };
 
-  const displayOutput = selectedFormat.toUpperCase();
+  const displayOutput = (selectedOutput || outputFormat || "png").toUpperCase();
 
   return (
-    <div className="w-full flex flex-col gap-6">
-      {/* 🔔 全域錯誤 Banner（例如 AVIF 不支援） */}
-      {errorBanner && (
-        <div className="w-full max-w-3xl mx-auto rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorBanner}
+    <div className="w-full flex flex-col gap-4">
+      {/* 🔴 Global Error Banner（FreeConvert 風格） */}
+      {globalError && (
+        <div className="w-full max-w-3xl mx-auto mb-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start justify-between gap-3">
+          <div className="flex gap-2">
+            <span className="mt-0.5">⚠️</span>
+            <span>{globalError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setGlobalError(null)}
+            className="text-red-400 hover:text-red-600 text-xs"
+          >
+            ✕
+          </button>
         </div>
       )}
 
-      {/* Drop zone + format 選單 */}
+      {/* 上方：輸出格式選單 */}
+      <div className="w-full max-w-3xl mx-auto flex items-center justify-between text-sm mb-1">
+        <div className="text-gray-600">
+          {inputFormat
+            ? lang === "zh"
+              ? `將 ${inputFormat} 檔案轉成 ${displayOutput}`
+              : `Convert ${inputFormat} files to ${displayOutput}`
+            : lang === "zh"
+            ? `檔案將被轉成 ${displayOutput}`
+            : `Files will be converted to ${displayOutput}`}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500">
+            {lang === "zh" ? "輸出格式" : "Output format"}
+          </span>
+          <select
+            className="border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={selectedOutput}
+            onChange={(e) => setSelectedOutput(e.target.value)}
+          >
+            {OUTPUT_OPTIONS.map((fmt) => (
+              <option key={fmt} value={fmt}>
+                {fmt.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Drop zone */}
       <div
-        className={`w-full max-w-3xl border-2 border-dashed rounded-2xl p-10 mx-auto text-center transition-colors ${
+        className={`w-full max-w-3xl border-2 border-dashed rounded-2xl p-10 mx-auto text-center transition-colors cursor-pointer ${
           isDragging
             ? "border-blue-500 bg-blue-50"
             : "border-gray-300 bg-white"
@@ -226,31 +265,20 @@ export default function FileUpload({
             <span className="text-2xl">⬆️</span>
           </div>
           <p className="text-lg font-semibold">
-            Drop files here or{" "}
-            <span className="text-blue-600 underline">browse</span>
+            {lang === "zh" ? "拖放檔案到這裡，或" : "Drop files here or "}
+            <span className="text-blue-600 underline">
+              {lang === "zh" ? "點擊選擇" : "browse"}
+            </span>
           </p>
           <p className="text-xs text-gray-500">
             {inputFormat
-              ? `Convert ${inputFormat} files to ${displayOutput}.`
+              ? lang === "zh"
+                ? `將 ${inputFormat} 檔案轉成 ${displayOutput}。`
+                : `Convert ${inputFormat} files to ${displayOutput}.`
+              : lang === "zh"
+              ? `檔案將被轉成 ${displayOutput}。`
               : `Files will be converted to ${displayOutput}.`}
           </p>
-
-          {/* 格式選單 */}
-          <div className="mt-3 flex items-center gap-2 text-xs">
-            <span className="text-gray-500">Convert to</span>
-            <select
-              className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-              value={selectedFormat}
-              onChange={(e) => setSelectedFormat(e.target.value.toLowerCase())}
-              onClick={(e) => e.stopPropagation()} // 避免點選 select 觸發 inputRef click
-            >
-              {availableFormats.map((fmt) => (
-                <option key={fmt} value={fmt}>
-                  {fmt.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         <input
@@ -263,57 +291,67 @@ export default function FileUpload({
       </div>
 
       {/* Queue */}
-      <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-sm p-4">
-        <h2 className="font-semibold mb-3">Conversion Queue</h2>
+      <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-sm p-4 border border-gray-100">
+        <h2 className="font-semibold mb-3 text-sm">
+          {lang === "zh" ? "轉檔佇列" : "Conversion Queue"}
+        </h2>
         {items.length === 0 && (
           <p className="text-sm text-gray-400">
-            No files yet. Drop a file to start converting.
+            {lang === "zh"
+              ? "尚未加入檔案，拖放檔案即可開始轉檔。"
+              : "No files yet. Drop a file to start converting."}
           </p>
         )}
         <ul className="space-y-3">
           {items.map((item) => {
-            const downloadUrl = item.downloadUrl;
+            const anyItem = item as any;
+            const downloadUrl = anyItem.downloadUrl as string | undefined;
 
             return (
               <li
                 key={item.id}
-                className="flex items-center justify-between gap-4 text-sm"
+                className="flex flex-col gap-2 text-sm border border-gray-100 rounded-xl px-3 py-2"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{item.name}</div>
-                  <div className="text-xs text-gray-400">
-                    {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
-                    {item.status} · to {item.outputFormat.toUpperCase()}
-                  </div>
-                  <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-2 transition-all ${
-                        item.status === "error"
-                          ? "bg-red-400"
-                          : item.status === "done"
-                          ? "bg-green-500"
-                          : "bg-blue-500"
-                      }`}
-                      style={{ width: `${item.progress ?? 0}%` }}
-                    />
-                  </div>
-                  {item.errorMessage && (
-                    <div className="mt-1 text-xs text-red-500">
-                      {item.errorMessage}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{item.name}</div>
+                    <div className="text-xs text-gray-400">
+                      {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
+                      {item.status} · →
+                      {" "}{item.outputFormat?.toUpperCase()}
                     </div>
+                    <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-2 transition-all ${
+                          item.status === "error"
+                            ? "bg-red-400"
+                            : item.status === "done"
+                            ? "bg-green-500"
+                            : "bg-blue-500"
+                        }`}
+                        style={{ width: `${item.progress ?? 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Download 按鈕 */}
+                  {item.status === "done" && downloadUrl && (
+                    <a
+                      href={downloadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      {lang === "zh" ? "下載" : "Download"}
+                    </a>
                   )}
                 </div>
 
-                {/* 完成時顯示 Download 按鈕 */}
-                {item.status === "done" && downloadUrl && (
-                  <a
-                    href={downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700"
-                  >
-                    Download
-                  </a>
+                {/* 單筆錯誤文字（小字） */}
+                {item.errorMessage && (
+                  <div className="text-xs text-red-500 mt-0.5">
+                    {item.errorMessage}
+                  </div>
                 )}
               </li>
             );

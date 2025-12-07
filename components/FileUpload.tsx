@@ -12,7 +12,7 @@ import { UploadItem, UploadStatus } from "@/types/files";
 
 type FileUploadProps = {
   inputFormat?: string;   // 顯示用，例如 "JPG"
-  outputFormat?: string;  // 預設輸出格式，例如 "PNG"
+  outputFormat?: string;  // 真正輸出格式，例如 "PNG"
 };
 
 export default function FileUpload({
@@ -23,10 +23,8 @@ export default function FileUpload({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // ✅ 目前選擇的輸出格式（小寫），預設來自 props
-  const [currentFormat, setCurrentFormat] = useState(
-    (outputFormat || "png").toLowerCase()
-  );
+  // 🔔 全頁面的錯誤 Banner
+  const [errorBanner, setErrorBanner] = useState<string | null>(null);
 
   const addItem = (file: File): UploadItem => {
     const id = crypto.randomUUID();
@@ -63,8 +61,8 @@ export default function FileUpload({
       await uploadFileToS3(item.file, uploadInfo.upload_url);
       updateItem(item.id, { status: "processing", progress: 10 });
 
-      // 3. 呼叫轉檔 API，格式由「目前選擇的輸出格式」決定
-      const targetFormat = (currentFormat || "png").toLowerCase();
+      // 3. 呼叫轉檔 API，格式由 props 決定
+      const targetFormat = (outputFormat || "png").toLowerCase();
       const { job_id } = await startConversion(uploadInfo.key, targetFormat);
 
       updateItem(item.id, { jobId: job_id, status: "processing" });
@@ -75,9 +73,8 @@ export default function FileUpload({
 
         if (res.status === "completed") {
           const anyRes = res as any;
-          // 🔥 優先使用後端回傳的 file_url（已是 presigned）
           const downloadUrlFromApi =
-            anyRes.file_url ?? anyRes.download_url ?? anyRes.output_url ?? null;
+            anyRes.download_url ?? anyRes.output_url ?? null;
 
           updateItem(item.id, {
             status: "done",
@@ -89,20 +86,53 @@ export default function FileUpload({
         }
 
         if (res.status === "failed" || res.status === "error") {
-          updateItem(item.id, { status: "error", progress: 100 });
+          const msg = res.message ?? "";
+          const lower = msg.toLowerCase();
+
+          updateItem(item.id, {
+            status: "error",
+            progress: 100,
+            // 給每個 item 自己的錯誤訊息（型別用 any 避免卡住）
+            errorMessage: msg,
+          } as any);
+
+          // 🔔 如果訊息裡包含 not supported，就顯示你要的 banner
+          if (lower.includes("not supported")) {
+            setErrorBanner("目前不支援此格式轉檔，請改用 PNG / JPG。");
+          } else if (!errorBanner) {
+            // 其他錯誤給一個比較通用的提示（只在沒有 banner 時設定一次）
+            setErrorBanner("轉檔時發生錯誤，請稍後再試。");
+          }
           return;
         }
 
-        const nextProgress = Math.min(95, (res.progress ?? 0) || 20);
+        const nextProgress = Math.min(
+          95,
+          (res.progress ?? 0) || 20
+        );
         updateItem(item.id, { progress: nextProgress });
 
         setTimeout(poll, 3000);
       };
 
       setTimeout(poll, 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error("[pipeline] error", err);
-      updateItem(item.id, { status: "error", progress: 100 });
+      const msg =
+        typeof err?.message === "string" ? err.message : "Conversion failed.";
+
+      updateItem(item.id, {
+        status: "error",
+        progress: 100,
+        errorMessage: msg,
+      } as any);
+
+      const lower = msg.toLowerCase();
+      if (lower.includes("not supported")) {
+        setErrorBanner("目前不支援此格式轉檔，請改用 PNG / JPG。");
+      } else if (!errorBanner) {
+        setErrorBanner("轉檔時發生錯誤，請稍後再試。");
+      }
     }
   };
 
@@ -112,7 +142,7 @@ export default function FileUpload({
       const item = addItem(file);
       void runJobPipeline(item);
     }
-  }, [runJobPipeline]); // 如果 TS 抱怨，先移除這個依賴也沒關係
+  }, []);
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
     e.preventDefault();
@@ -146,19 +176,28 @@ export default function FileUpload({
     }
   };
 
-  const displayOutput = currentFormat.toUpperCase();
-
-  // 這裡是給使用者可以選的輸出格式（之後要加更多很容易）
-  const formatOptions = ["png", "jpg", "webp", "pdf"];
+  const displayOutput = (outputFormat || "png").toUpperCase();
 
   return (
-    <div className="w-full flex flex-col gap-6">
+    <div className="w-full flex flex-col gap-4">
+      {/* 🔔 錯誤 Banner */}
+      {errorBanner && (
+        <div className="w-full max-w-3xl mx-auto rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start justify-between gap-3">
+          <span>{errorBanner}</span>
+          <button
+            type="button"
+            onClick={() => setErrorBanner(null)}
+            className="text-xs underline shrink-0"
+          >
+            關閉
+          </button>
+        </div>
+      )}
+
       {/* Drop zone */}
       <div
         className={`w-full max-w-3xl border-2 border-dashed rounded-2xl p-10 mx-auto text-center transition-colors ${
-          isDragging
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 bg-white"
+          isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"
         }`}
         onDrop={onDrop}
         onDragOver={onDragOver}
@@ -178,25 +217,6 @@ export default function FileUpload({
               ? `Convert ${inputFormat} files to ${displayOutput}.`
               : `Files will be converted to ${displayOutput}.`}
           </p>
-
-          {/* ✅ 輸出格式選擇器 */}
-          <div
-            className="mt-2 flex items-center gap-2 text-xs text-gray-600"
-            onClick={(e) => e.stopPropagation()} // 避免點 select 觸發上傳
-          >
-            <span>Output format:</span>
-            <select
-              value={currentFormat}
-              onChange={(e) => setCurrentFormat(e.target.value)}
-              className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white"
-            >
-              {formatOptions.map((fmt) => (
-                <option key={fmt} value={fmt}>
-                  {fmt.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         <input
@@ -220,6 +240,7 @@ export default function FileUpload({
           {items.map((item) => {
             const anyItem = item as any;
             const downloadUrl = anyItem.downloadUrl as string | undefined;
+            const errorMessage = anyItem.errorMessage as string | undefined;
 
             return (
               <li
@@ -229,18 +250,25 @@ export default function FileUpload({
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{item.name}</div>
                   <div className="text-xs text-gray-400">
-                    {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
-                    {item.status}
+                    {(item.size / (1024 * 1024)).toFixed(2)} MB · {item.status}
                   </div>
                   <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-2 bg-blue-500 transition-all"
+                      className={`h-2 transition-all ${
+                        item.status === "error"
+                          ? "bg-red-400"
+                          : "bg-blue-500"
+                      }`}
                       style={{ width: `${item.progress ?? 0}%` }}
                     />
                   </div>
+                  {item.status === "error" && errorMessage && (
+                    <div className="mt-1 text-xs text-red-500 truncate">
+                      {errorMessage}
+                    </div>
+                  )}
                 </div>
 
-                {/* 轉檔完成才顯示 Download */}
                 {item.status === "done" && downloadUrl && (
                   <a
                     href={downloadUrl}

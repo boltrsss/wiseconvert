@@ -1,236 +1,92 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
-import {
-  getUploadUrl,
-  uploadFileToS3,
-  startConversion,
-  getJobStatus,
-  type StatusResponse,
-} from "@/lib/api";
-import { UploadItem, UploadStatus } from "@/types/files";
+import React, { useState } from "react";
+import { UploadItem } from "@/types/files";
+import ErrorBanner from "./ErrorBanner";
 
-type FileUploadProps = {
-  inputFormat?: string;   // 顯示用，例如 "JPG"
-  outputFormat?: string;  // 真正輸出格式，例如 "PNG"
-};
+const SUPPORTED_IMAGE_INPUTS = ["image/jpeg", "image/png", "image/webp"];
+const SUPPORTED_VIDEO_INPUTS = ["video/mp4", "video/quicktime"];
 
-export default function FileUpload({
-  inputFormat,
-  outputFormat = "png",
-}: FileUploadProps) {
-  const [items, setItems] = useState<UploadItem[]>([]);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+const OUTPUT_FORMATS = ["jpg", "png", "webp", "mp4"];
 
-  const addItem = (file: File): UploadItem => {
-    const id = crypto.randomUUID();
+interface Props {
+  onAddFiles: (files: UploadItem[]) => void;
+}
 
-    const item: UploadItem = {
-      id,
-      file,
-      name: file.name,
-      size: file.size,
-      type: file.type || "application/octet-stream",
-      isVideo: file.type.startsWith("video/"),
-      // ⬇️ 這裡原本是 "waiting"，改成 "idle"
-      status: "idle" as UploadStatus,
-      progress: 0,
-    };
+export default function FileUpload({ onAddFiles }: Props) {
+  const [error, setError] = useState("");
+  const [outputFormat, setOutputFormat] = useState("png"); // default
 
-    setItems((prev) => [...prev, item]);
-    return item;
-  };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList) return;
 
-  const updateItem = (id: string, patch: Partial<UploadItem> | any) => {
-    setItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, ...patch } : it))
-    );
-  };
+    const newItems: UploadItem[] = [];
 
-  const runJobPipeline = async (item: UploadItem) => {
-    try {
-      updateItem(item.id, { status: "uploading", progress: 0 });
+    Array.from(fileList).forEach((file) => {
+      const isVideo = file.type.startsWith("video/");
+      const isImage = file.type.startsWith("image/");
 
-      // 1. 拿上傳 URL
-      const uploadInfo = await getUploadUrl(item.file);
+      // -------------------------------
+      // ❌ Unsupported format detection
+      // -------------------------------
+      if (
+        !(SUPPORTED_IMAGE_INPUTS.includes(file.type) || SUPPORTED_VIDEO_INPUTS.includes(file.type))
+      ) {
+        setError(`目前不支援「${file.type}」格式，請改用 PNG / JPG / MP4`);
+        return;
+      }
 
-      // 2. 上傳到 S3
-      await uploadFileToS3(item.file, uploadInfo.upload_url);
-      updateItem(item.id, { status: "processing", progress: 10 });
-
-      // 3. 呼叫轉檔 API，格式由 props 決定
-      const targetFormat = (outputFormat || "png").toLowerCase();
-      const { job_id } = await startConversion(uploadInfo.key, targetFormat);
-
-      updateItem(item.id, { jobId: job_id, status: "processing" });
-
-      // 4. polling 狀態
-      const poll = async (): Promise<void> => {
-        const res: StatusResponse = await getJobStatus(job_id);
-
-        if (res.status === "completed") {
-          const anyRes = res as any;
-          // 這裡多看 file_url（S3 簽名網址）
-          const downloadUrlFromApi =
-            anyRes.file_url ?? anyRes.download_url ?? anyRes.output_url ?? null;
-
-          updateItem(item.id, {
-            status: "done",
-            progress: 100,
-            outputKey: res.output_s3_key,
-            ...(downloadUrlFromApi ? { downloadUrl: downloadUrlFromApi } : {}),
-          } as any);
-          return;
-        }
-
-        if (res.status === "failed" || res.status === "error") {
-          updateItem(item.id, { status: "error", progress: 100 });
-          return;
-        }
-
-        const nextProgress = Math.min(
-          95,
-          (res.progress ?? 0) || 20
-        );
-        updateItem(item.id, { progress: nextProgress });
-
-        setTimeout(poll, 3000);
+      const item: UploadItem = {
+        id: crypto.randomUUID(),
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        isVideo,
+        status: "idle",
+        progress: 0,
+        outputFormat
       };
 
-      setTimeout(poll, 3000);
-    } catch (err) {
-      console.error("[pipeline] error", err);
-      updateItem(item.id, { status: "error", progress: 100 });
+      newItems.push(item);
+    });
+
+    if (newItems.length > 0) {
+      onAddFiles(newItems);
     }
   };
-
-  const handleFiles = useCallback((files: FileList | File[]) => {
-    const list = Array.from(files);
-    for (const file of list) {
-      const item = addItem(file);
-      void runJobPipeline(item);
-    }
-  }, []);
-
-  const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const dt = e.dataTransfer;
-    if (!dt) return;
-    if (dt.files && dt.files.length > 0) {
-      handleFiles(dt.files);
-    }
-  };
-
-  const onDragOver: React.DragEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const onDragLeave: React.DragEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const onFileInputChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      handleFiles(files);
-      e.target.value = "";
-    }
-  };
-
-  const displayOutput = (outputFormat || "png").toUpperCase();
 
   return (
-    <div className="w-full flex flex-col gap-6">
-      {/* Drop zone */}
-      <div
-        className={`w-full max-w-3xl border-2 border-dashed rounded-2xl p-10 mx-auto text-center transition-colors ${
-          isDragging
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 bg-white"
-        }`}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onClick={() => inputRef.current?.click()}
-      >
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
-            <span className="text-2xl">⬆️</span>
-          </div>
-          <p className="text-lg font-semibold">
-            Drop files here or{" "}
-            <span className="text-blue-600 underline">browse</span>
-          </p>
-          <p className="text-xs text-gray-500">
-            {inputFormat
-              ? `Convert ${inputFormat} files to ${displayOutput}.`
-              : `Files will be converted to ${displayOutput}.`}
-          </p>
+    <div className="w-full">
+      {/* Error Banner */}
+      <ErrorBanner message={error} onClose={() => setError("")} />
+
+      <div className="flex flex-col items-center gap-4">
+        {/* Convert To Selector */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-600">Convert to:</span>
+          <select
+            className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+            value={outputFormat}
+            onChange={(e) => setOutputFormat(e.target.value)}
+          >
+            {OUTPUT_FORMATS.map((fmt) => (
+              <option key={fmt} value={fmt}>
+                {fmt.toUpperCase()}
+              </option>
+            ))}
+          </select>
         </div>
 
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={onFileInputChange}
-        />
-      </div>
-
-      {/* Queue */}
-      <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-sm p-4">
-        <h2 className="font-semibold mb-3">Conversion Queue</h2>
-        {items.length === 0 && (
-          <p className="text-sm text-gray-400">
-            No files yet. Drop a file to start converting.
-          </p>
-        )}
-        <ul className="space-y-3">
-          {items.map((item) => {
-            const anyItem = item as any;
-            const downloadUrl = anyItem.downloadUrl as string | undefined;
-
-            return (
-              <li
-                key={item.id}
-                className="flex items-center justify-between gap-4 text-sm"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{item.name}</div>
-                  <div className="text-xs text-gray-400">
-                    {(item.size / (1024 * 1024)).toFixed(2)} MB · {item.status}
-                  </div>
-                  <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-2 bg-blue-500 transition-all"
-                      style={{ width: `${item.progress ?? 0}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* status API 有 downloadUrl 就會顯示 */}
-                {item.status === "done" && downloadUrl && (
-                  <a
-                    href={downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700"
-                  >
-                    Download
-                  </a>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+        {/* File Input */}
+        <label
+          htmlFor="file"
+          className="px-6 py-4 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 hover:bg-gray-200 cursor-pointer"
+        >
+          <span className="text-gray-700">Click to upload files</span>
+        </label>
+        <input id="file" type="file" multiple className="hidden" onChange={handleFileChange} />
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-// lib/errorMessages.ts
+// components/errorMessages.ts
 
 export const errorMessages = {
   unsupportedFormat: {
@@ -21,7 +21,6 @@ export const errorMessages = {
 
 export type ErrorMessageKey = keyof typeof errorMessages;
 
-// 很簡單的語系偵測：看瀏覽器語言是否包含 zh
 export function detectLang(): "en" | "zh" {
   if (typeof navigator === "undefined") return "en";
   const lang = navigator.language.toLowerCase();

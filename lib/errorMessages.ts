@@ -7,7 +7,7 @@ export const errorMessages = {
   },
   conversionFailed: {
     en: "Conversion failed. Please try again.",
-    zh: "轉檔失敗，請再試一次。"
+    zh: '轉檔失敗，請再試一次。'
   },
   uploadFailed: {
     en: "Upload failed. Please check your connection and try again.",

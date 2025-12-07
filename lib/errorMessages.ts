@@ -7,15 +7,15 @@ export const errorMessages = {
   },
   conversionFailed: {
     en: "Conversion failed. Please try again.",
-    zh: "轉檔失敗，請再試一次。",
+
   },
   uploadFailed: {
     en: "Upload failed. Please check your connection and try again.",
-    zh: "上傳失敗，請檢查網路連線後再試一次。",
+ 
   },
   networkError: {
     en: "Network error. Please refresh the page and try again.",
-    zh: "網路發生錯誤，請重新整理頁面後再試一次。",
+   
   },
 } as const;
 

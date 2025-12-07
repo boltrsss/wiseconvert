@@ -1,6 +1,5 @@
-
-export type UploadStatus = "idle" | "uploading" | "processing" | "done" | "error";
-
+＃ export type UploadStatus = "idle" | "uploading" | "processing" | "done" | "error";
+export type UploadStatus = "waiting" | "uploading" | "processing" | "done" | "error";
 export type VideoSettings = {
   codec: string;
   resolution: string;

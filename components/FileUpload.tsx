@@ -133,4 +133,185 @@ export default function FileUpload({
       if (lower.includes("not supported")) {
         setErrorBanner("目前不支援此格式轉檔，請改用 PNG / JPG。");
       } else if (!errorBanner) {
-        setErrorBanner("轉檔時發生錯誤，請稍後再試。")
+        setErrorBanner("轉檔時發生錯誤，請稍後再試。");
+      }
+    }
+  };
+
+  const handleFiles = useCallback((files: FileList | File[]) => {
+    const list = Array.from(files);
+    for (const file of list) {
+      const item = addItem(file);
+      void runJobPipeline(item);
+    }
+  }, []);
+
+  const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const dt = e.dataTransfer;
+    if (!dt) return;
+    if (dt.files && dt.files.length > 0) {
+      handleFiles(dt.files);
+    }
+  };
+
+  const onDragOver: React.DragEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const onDragLeave: React.DragEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const onFileInputChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFiles(files);
+      e.target.value = "";
+    }
+  };
+
+  const displayOutput = selectedOutputFormat.toUpperCase();
+
+  // 允許的輸出格式（之後可以再擴充）
+  const OUTPUT_OPTIONS = [
+    { value: "png", label: "PNG" },
+    { value: "jpg", label: "JPG" },
+    { value: "jpeg", label: "JPEG" },
+    { value: "webp", label: "WEBP" },
+    { value: "pdf", label: "PDF" },
+  ];
+
+  return (
+    <div className="w-full flex flex-col gap-4">
+      {/* 🔔 錯誤 Banner */}
+      {errorBanner && (
+        <div className="w-full max-w-3xl mx-auto rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start justify-between gap-3">
+          <span>{errorBanner}</span>
+          <button
+            type="button"
+            onClick={() => setErrorBanner(null)}
+            className="text-xs underline shrink-0"
+          >
+            關閉
+          </button>
+        </div>
+      )}
+
+      {/* Drop zone */}
+      <div
+        className={`w-full max-w-3xl border-2 border-dashed rounded-2xl p-10 mx-auto text-center transition-colors ${
+          isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white"
+        }`}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onClick={() => inputRef.current?.click()}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
+            <span className="text-2xl">⬆️</span>
+          </div>
+          <p className="text-lg font-semibold">
+            Drop files here or{" "}
+            <span className="text-blue-600 underline">browse</span>
+          </p>
+          <p className="text-xs text-gray-500">
+            {inputFormat
+              ? `Convert ${inputFormat} files to ${displayOutput}.`
+              : `Files will be converted to ${displayOutput}.`}
+          </p>
+        </div>
+
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={onFileInputChange}
+        />
+
+        {/* 🔽 輸出格式選單 */}
+        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-600">
+          <span className="font-medium">Output format:</span>
+          <select
+            className="border rounded-lg px-2 py-1 text-xs bg-white"
+            value={selectedOutputFormat}
+            onChange={(e) => setSelectedOutputFormat(e.target.value)}
+            onClick={(e) => e.stopPropagation()} // 避免點選時觸發上層 click
+          >
+            {OUTPUT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Queue */}
+      <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-sm p-4">
+        <h2 className="font-semibold mb-3">Conversion Queue</h2>
+        {items.length === 0 && (
+          <p className="text-sm text-gray-400">
+            No files yet. Drop a file to start converting.
+          </p>
+        )}
+        <ul className="space-y-3">
+          {items.map((item) => {
+            const anyItem = item as any;
+            const downloadUrl = anyItem.downloadUrl as string | undefined;
+            const errorMessage = anyItem.errorMessage as string | undefined;
+
+            return (
+              <li
+                key={item.id}
+                className="flex items-center justify-between gap-4 text-sm"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{item.name}</div>
+                  <div className="text-xs text-gray-400">
+                    {(item.size / (1024 * 1024)).toFixed(2)} MB · {item.status}
+                  </div>
+                  <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-2 transition-all ${
+                        item.status === "error"
+                          ? "bg-red-400"
+                          : "bg-blue-500"
+                      }`}
+                      style={{ width: `${item.progress ?? 0}%` }}
+                    />
+                  </div>
+                  {item.status === "error" && errorMessage && (
+                    <div className="mt-1 text-xs text-red-500 truncate">
+                      {errorMessage}
+                    </div>
+                  )}
+                </div>
+
+                {item.status === "done" && downloadUrl && (
+                  <a
+                    href={downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    Download
+                  </a>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+}

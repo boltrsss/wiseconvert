@@ -1,10 +1,9 @@
-export type UploadStatus = "waiting" | "uploading" | "processing" | "done" | "error";
-export type VideoSettings = {
-  codec: string;
-  resolution: string;
-  aspectRatio: string;
-  frameRate: string;
-};
+export type UploadStatus =
+  | "waiting"
+  | "uploading"
+  | "processing"
+  | "done"
+  | "error";
 
 export type UploadItem = {
   id: string;
@@ -15,7 +14,7 @@ export type UploadItem = {
   isVideo: boolean;
   status: UploadStatus;
   progress: number;
-  jobId?: string;        // <-- add this
-  outputKey?: string;   // <-- add this line
-  errorMessage?: string;   // <-- add this line
+  jobId?: string;
+  outputKey?: string;
+  downloadUrl?: string;
 };

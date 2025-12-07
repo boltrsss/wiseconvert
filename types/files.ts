@@ -26,6 +26,8 @@ export interface UploadItem {
   // 錯誤訊息（可選）
   errorMessage?: string;
 
+  outputFormat: string; // 必須有
+
   // 影片設定（只有 video 才會用到）
   videoSettings?: VideoSettings;
 }

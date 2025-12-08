@@ -1,32 +1,59 @@
 {
-  "site": {
-    "title": "WiseConvert - Free & Secure File Converter",
-    "subtitle": "Convert images, videos and documents in seconds."
-  },
   "navbar": {
-    "home": "Home",
-    "tools": "Tools",
-    "language": "Language",
+    "convert": "Convert",
+    "how_it_works": "How it works",
+    "why": "Why WiseConvert",
+    "pricing": "Pricing",
+    "language_label": "Language",
     "language_en": "English",
     "language_zh": "中文"
   },
-  "upload": {
-    "title": "Upload your file",
-    "subtitle": "Drag & drop your files here or click to browse.",
-    "button_select": "Choose File",
-    "button_convert": "Convert",
-    "status_waiting": "Waiting",
-    "status_uploading": "Uploading",
-    "status_processing": "Processing",
-    "status_done": "Completed",
-    "status_error": "Error"
+  "auth": {
+    "login": "Log in",
+    "signup": "Sign up"
   },
-  "settings": {
-    "title": "Conversion Settings",
-    "resolution": "Resolution",
-    "format": "Output Format",
-    "quality": "Quality",
-    "save": "Save",
-    "cancel": "Cancel"
+  "hero": {
+    "title": "File Converter",
+    "subtitle": "Easily convert files from one format to another, online."
+  },
+  "why": {
+    "title": "Why choose WiseConvert?",
+    "fast_title": "Fast cloud processing",
+    "fast_desc": "High-performance servers convert your files quickly.",
+    "privacy_title": "Privacy-first",
+    "privacy_desc": "Files are encrypted and auto-deleted after a short period.",
+    "all_in_one_title": "All-in-one toolset",
+    "all_in_one_desc": "Convert images, videos, audio and documents in one place."
+  },
+  "how_it_works": {
+    "title": "How it works",
+    "step1_title": "Upload your files",
+    "step1_desc": "Browse or drag & drop.",
+    "step2_title": "Choose output format",
+    "step2_desc": "Pick JPG, MP4, PDF, MP3 and more.",
+    "step3_title": "Convert in the cloud",
+    "step3_desc": "Fast servers do the heavy work.",
+    "step4_title": "Download instantly",
+    "step4_desc": "Your files will be ready in seconds."
+  },
+  "pricing": {
+    "title": "Start free. Upgrade later.",
+    "free_title": "Free",
+    "free_desc": "Ideal for most users.",
+    "free_price": "$0",
+    "free_benefit1": "✓ 1GB max file size",
+    "free_benefit2": "✓ Standard conversion speed",
+    "free_benefit3": "✓ Basic tools",
+    "pro_title": "Pro",
+    "pro_desc": "Coming soon — for power users.",
+    "pro_price": "$19",
+    "pro_benefit1": "✓ Faster conversions",
+    "pro_benefit2": "✓ Higher file limits",
+    "pro_benefit3": "✓ Priority support"
+  },
+  "footer": {
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "contact": "Contact"
   }
 }

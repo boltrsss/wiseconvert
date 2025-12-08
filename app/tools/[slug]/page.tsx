@@ -6,6 +6,7 @@ import FileUpload from "@/components/FileUpload";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLang } from "@/context/LanguageContext";
 import { getToolMeta } from "@/lib/tools";
+export const runtime = "edge";
 
 type ToolPageProps = {
   params: {

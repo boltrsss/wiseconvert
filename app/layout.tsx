@@ -1,6 +1,7 @@
 
 import "./globals.css";
 import type { Metadata } from "next";
+import { LanguageProvider } from '@/context/LanguageContext'; // ✅ 新增這行 1208加的
 
 export const metadata: Metadata = {
   title: "WiseConvert - Online File Converter",

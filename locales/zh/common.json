@@ -1,0 +1,32 @@
+{
+  "site": {
+    "title": "WiseConvert - 免費又安全的線上轉檔工具",
+    "subtitle": "數秒內快速轉換圖片、影片與文件格式。"
+  },
+  "navbar": {
+    "home": "首頁",
+    "tools": "工具列表",
+    "language": "語言",
+    "language_en": "English",
+    "language_zh": "中文"
+  },
+  "upload": {
+    "title": "上傳您的檔案",
+    "subtitle": "拖曳檔案到此處，或點擊選擇檔案。",
+    "button_select": "選擇檔案",
+    "button_convert": "開始轉檔",
+    "status_waiting": "等待中",
+    "status_uploading": "上傳中",
+    "status_processing": "處理中",
+    "status_done": "完成",
+    "status_error": "錯誤"
+  },
+  "settings": {
+    "title": "轉檔設定",
+    "resolution": "解析度",
+    "format": "輸出格式",
+    "quality": "品質",
+    "save": "儲存",
+    "cancel": "取消"
+  }
+}

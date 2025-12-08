@@ -1,0 +1,32 @@
+{
+  "site": {
+    "title": "WiseConvert - Free & Secure File Converter",
+    "subtitle": "Convert images, videos and documents in seconds."
+  },
+  "navbar": {
+    "home": "Home",
+    "tools": "Tools",
+    "language": "Language",
+    "language_en": "English",
+    "language_zh": "中文"
+  },
+  "upload": {
+    "title": "Upload your file",
+    "subtitle": "Drag & drop your files here or click to browse.",
+    "button_select": "Choose File",
+    "button_convert": "Convert",
+    "status_waiting": "Waiting",
+    "status_uploading": "Uploading",
+    "status_processing": "Processing",
+    "status_done": "Completed",
+    "status_error": "Error"
+  },
+  "settings": {
+    "title": "Conversion Settings",
+    "resolution": "Resolution",
+    "format": "Output Format",
+    "quality": "Quality",
+    "save": "Save",
+    "cancel": "Cancel"
+  }
+}

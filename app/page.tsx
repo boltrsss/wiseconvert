@@ -1,9 +1,15 @@
 // app/page.tsx
+'use client'; // ✅ 加這行，讓這頁可以用 hook
+
 import React from "react";
-import { AdSlot } from "@/components/AdSlot"; // 如果 @ 無法用，換成 "../components/AdSlot"
-import FileUpload from "../components/FileUpload";
+import { AdSlot } from "@/components/AdSlot";
+import FileUpload from "@/components/FileUpload"; // ✅ 用 @ 別名比較乾淨
+import { useLang } from "@/context/LanguageContext"; // ✅ 新增
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"; // ✅ 新增
 
 export default function HomePage() {
+  const { t } = useLang(); // ✅ 取得多語系字串函式
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       {/* Navbar */}
@@ -22,26 +28,32 @@ export default function HomePage() {
           {/* Nav links */}
           <nav className="hidden md:flex items-center gap-8 text-[16px] font-medium text-slate-600">
             <a href="#converter" className="hover:text-blue-600">
-              Convert
+              {t("navbar.convert")} {/* 原本: Convert */}
             </a>
             <a href="#how-it-works" className="hover:text-blue-600">
-              How it works
+              {t("navbar.how_it_works")} {/* 原本: How it works */}
             </a>
             <a href="#why" className="hover:text-blue-600">
-              Why WiseConvert
+              {t("navbar.why")} {/* 原本: Why WiseConvert */}
             </a>
             <a href="#pricing" className="hover:text-blue-600">
-              Pricing
+              {t("navbar.pricing")} {/* 原本: Pricing */}
             </a>
           </nav>
 
-          <div className="hidden md:flex items-center gap-4 text-[16px] font-medium">
-            <button className="px-4 py-1.5 rounded-lg hover:bg-slate-100">
-              Log in
-            </button>
-            <button className="px-5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
-              Sign up
-            </button>
+          {/* 右側：登入 / 註冊 + 語言切換 */}
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4 text-[16px] font-medium">
+              <button className="px-4 py-1.5 rounded-lg hover:bg-slate-100">
+                {t("auth.login")} {/* 原本: Log in */}
+              </button>
+              <button className="px-5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+                {t("auth.signup")} {/* 原本: Sign up */}
+              </button>
+            </div>
+
+            {/* ✅ 多語系切換器 */}
+            <LanguageSwitcher />
           </div>
         </div>
       </header>
@@ -57,9 +69,11 @@ export default function HomePage() {
             {/* Title */}
             <div className="text-center mb-6 lg:mb-8">
               <h1 className="text-4xl sm:text-[42px] font-semibold text-slate-900">
+                {/* 之後可以改成 t('hero.title')，目前先保留英文 */}
                 File Converter
               </h1>
               <p className="mt-3 text-base sm:text-lg text-slate-500">
+                {/* 同上，之後再多語系化 */}
                 Easily convert files from one format to another, online.
               </p>
             </div>

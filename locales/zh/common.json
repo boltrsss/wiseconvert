@@ -7,6 +7,8 @@
     "language_label": "語言",
     "language_en": "English",
     "language_zh": "中文"
+    "all_tools": "所有工具"
+
   },
   "auth": {
     "login": "登入",

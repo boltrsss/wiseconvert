@@ -12,7 +12,7 @@ import { UploadItem, UploadStatus } from "@/types/files";
 import {
   errorMessages,
   type ErrorMessageKey,
-} from "@/components/errorMessages"; // ✅ 改這裡
+} from "@/lib/errorMessages"; // ✅ 改這裡
 import { useLang } from "@/context/LanguageContext"; // ✅ 新增
 
 type FileUploadProps = {

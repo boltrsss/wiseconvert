@@ -1,19 +1,12 @@
-import en from '@/locales/en/common.json';
-import zh from '@/locales/zh/common.json';
+// /lib/i18n.ts
+export type Language = "en" | "zh";
 
-export type Lang = 'en' | 'zh';
-
-const dictionary = {
-  en,
-  zh,
-};
-
-export function detectLang(): Lang {
-  if (typeof navigator === 'undefined') return 'en';
-  const lang = navigator.language.toLowerCase();
-  return lang.includes('zh') ? 'zh' : 'en';
-}
-
-export function getDictionary(lang: Lang) {
-  return dictionary[lang] || dictionary.en;
+export async function loadLocale(lang: Language) {
+  switch (lang) {
+    case "zh":
+      return (await import("@/locales/zh/common.json")).default;
+    case "en":
+    default:
+      return (await import("@/locales/en/common.json")).default;
+  }
 }

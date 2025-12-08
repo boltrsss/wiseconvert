@@ -12,7 +12,8 @@ import { loadLocale } from "@/lib/i18n";
 
 export type Language = "en" | "zh";
 
-type Messages = Record<string, string>;
+// 👇 讓 JSON 可以是巢狀結構
+type Messages = Record<string, any>;
 
 interface LanguageContextValue {
   lang: Language;
@@ -35,6 +36,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       try {
         const data = await loadLocale(lang);
         if (!cancelled) {
+          // 👇 這裡就不會再被 TS 嫌棄
           setMessages(data as Messages);
         }
       } catch (err) {
@@ -52,8 +54,21 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     };
   }, [lang]);
 
-  const t = (key: string, fallback?: string) =>
-    messages[key] ?? fallback ?? key;
+  // 👇 支援 "navbar.convert" 這種 key
+  const t = (key: string, fallback?: string) => {
+    const parts = key.split(".");
+    let cur: any = messages;
+
+    for (const p of parts) {
+      if (cur == null || typeof cur !== "object") {
+        return fallback ?? key;
+      }
+      cur = cur[p];
+    }
+
+    if (typeof cur === "string") return cur;
+    return fallback ?? key;
+  };
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>
@@ -74,5 +89,5 @@ export function useLanguage() {
 // ✅ 舊程式有用到的別名（useLang）
 export const useLang = useLanguage;
 
-// ✅ 如果你之後想用這個名字也可以
+// ✅ 若之後想用更語意化的名字也可以
 export const useLanguageContext = useLanguage;

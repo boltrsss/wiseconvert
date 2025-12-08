@@ -9,11 +9,15 @@ import {
   type StatusResponse,
 } from "@/lib/api";
 import { UploadItem, UploadStatus } from "@/types/files";
-import { detectLang, errorMessages } from "@/lib/errorMessages";
+import {
+  errorMessages,
+  type ErrorMessageKey,
+} from "@/components/errorMessages"; // ✅ 改這裡
+import { useLang } from "@/context/LanguageContext"; // ✅ 新增
 
 type FileUploadProps = {
-  inputFormat?: string;   // 顯示用，例如 "JPG"
-  outputFormat?: string;  // 預設輸出格式，例如 "PNG"
+  inputFormat?: string; // 顯示用，例如 "JPG"
+  outputFormat?: string; // 預設輸出格式，例如 "PNG"
 };
 
 const OUTPUT_OPTIONS = ["png", "jpg", "jpeg", "webp"];
@@ -27,9 +31,11 @@ export default function FileUpload({
   const [isDragging, setIsDragging] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
-  // 語系偵測（zh / en）
-  const [lang] = useState<"en" | "zh">(() => detectLang());
-  const t = (key: keyof typeof errorMessages) => errorMessages[key][lang];
+  // ✅ 從全局 context 取得語系（跟 Navbar 切換同步）
+  const { lang } = useLang(); // lang: "en" | "zh"
+
+  // ✅ 專門給錯誤訊息用的小 helper
+  const getErrorText = (key: ErrorMessageKey) => errorMessages[key][lang];
 
   // 全域輸出格式選單（預設用 props）
   const [selectedOutput, setSelectedOutput] = useState(
@@ -62,7 +68,7 @@ export default function FileUpload({
   };
 
   const handleUnsupportedFormat = (itemId: string) => {
-    const msg = t("unsupportedFormat");
+    const msg = getErrorText("unsupportedFormat");
     updateItem(itemId, {
       status: "error",
       progress: 100,
@@ -123,8 +129,8 @@ export default function FileUpload({
             rawMsg?.toLowerCase().includes("invalid data");
 
           const msg = isUnsupported
-            ? t("unsupportedFormat")
-            : t("conversionFailed");
+            ? getErrorText("unsupportedFormat")
+            : getErrorText("conversionFailed");
 
           updateItem(item.id, {
             status: "error",
@@ -144,7 +150,7 @@ export default function FileUpload({
       setTimeout(poll, 3000);
     } catch (err) {
       console.error("[pipeline] error", err);
-      const msg = t("conversionFailed");
+      const msg = getErrorText("conversionFailed");
       updateItem(item.id, {
         status: "error",
         progress: 100,
@@ -162,7 +168,7 @@ export default function FileUpload({
         void runJobPipeline(item);
       }
     },
-    // 依賴輸出格式 & 語系
+    // ✅ 依賴輸出格式 & 語系（語系變更時，新加入檔案會拿到新的錯誤語言）
     [selectedOutput, lang]
   );
 
@@ -317,8 +323,8 @@ export default function FileUpload({
                     <div className="font-medium truncate">{item.name}</div>
                     <div className="text-xs text-gray-400">
                       {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
-                      {item.status} · →
-                      {" "}{item.outputFormat?.toUpperCase()}
+                      {item.status} · →{" "}
+                      {item.outputFormat?.toUpperCase()}
                     </div>
                     <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                       <div

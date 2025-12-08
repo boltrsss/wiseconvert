@@ -8,7 +8,6 @@
     "language_en": "English",
     "language_zh": "中文",
     "all_tools": "All tools"
-
   },
   "auth": {
     "login": "Log in",
@@ -58,7 +57,6 @@
     "terms": "Terms",
     "contact": "Contact"
   },
-
   "queue": {
     "title": "Conversion Queue",
     "waiting": "Waiting",
@@ -67,7 +65,6 @@
     "done": "Completed",
     "error": "Error"
   },
-
   "video_settings": {
     "title": "Advanced Video Settings",
     "codec": "Codec",
@@ -76,69 +73,18 @@
     "frame_rate": "Frame Rate",
     "cancel": "Cancel",
     "save": "Save Settings",
-
     "codec_h264": "H.264 (MP4)",
     "codec_h265": "H.265 / HEVC",
     "codec_vp9": "VP9 (WebM)",
     "codec_av1": "AV1",
-
     "res_2160p": "4K (2160p)",
     "res_1440p": "2K (1440p)",
     "res_1080p": "Full HD (1080p)",
     "res_720p": "HD (720p)",
     "res_480p": "SD (480p)",
-
     "ar_169": "16:9 (Widescreen)",
     "ar_916": "9:16 (Mobile Portrait)",
     "ar_43": "4:3",
     "ar_11": "1:1 (Square)"
   }
-
-
-  "hero": {
-    "title": "File Converter",
-    "subtitle": "Easily convert files from one format to another, online."
-  },
-
-  "how": {
-    "title": "How it works",
-    "steps": {
-      "1_title": "Upload your files",
-      "1_desc": "Browse or drag & drop.",
-      "2_title": "Choose output format",
-      "2_desc": "Pick JPG, MP4, PDF, MP3 and more.",
-      "3_title": "Convert in the cloud",
-      "3_desc": "Fast servers do the heavy work.",
-      "4_title": "Download instantly",
-      "4_desc": "Your files will be ready in seconds."
-    }
-  },
-
-  "why": {
-    "title": "Why choose WiseConvert?",
-    "fast_title": "Fast cloud processing",
-    "fast_desc": "High-performance servers convert your files quickly.",
-    "privacy_title": "Privacy-first",
-    "privacy_desc": "Files are encrypted and auto-deleted after a short period.",
-    "tools_title": "All-in-one toolset",
-    "tools_desc": "Convert images, videos, audio and documents in one place."
-  },
-
-  "pricing": {
-    "title": "Start free. Upgrade later.",
-    "free": "Free",
-    "free_desc": "Ideal for most users.",
-    "pro": "Pro",
-    "pro_desc": "Coming soon — for power users.",
-    "monthly": "per month"
-  },
-
-  "footer": {
-    "privacy": "Privacy",
-    "terms": "Terms",
-    "contact": "Contact"
-  }
-
-  
-  
 }

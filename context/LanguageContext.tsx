@@ -10,7 +10,6 @@ import React, {
 } from "react";
 import { loadLocale } from "@/lib/i18n";
 
-// 目前只用到這兩種語系
 export type Language = "en" | "zh";
 
 type Messages = Record<string, string>;
@@ -29,7 +28,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Language>("en");
   const [messages, setMessages] = useState<Messages>({});
 
-  // 初始可以用瀏覽器語系，之後用者切換時就用選單的值
   useEffect(() => {
     let cancelled = false;
 
@@ -48,6 +46,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
 
     void load();
+
     return () => {
       cancelled = true;
     };
@@ -63,7 +62,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ✅ 提供 useLanguage 給 Header / ConversionQueue / 未來元件使用
+// ✅ 正式 hook 名稱
 export function useLanguage() {
   const ctx = useContext(LanguageContext);
   if (!ctx) {
@@ -72,5 +71,8 @@ export function useLanguage() {
   return ctx;
 }
 
-// 🔁 如果你之前不小心用過這個名字，也一併支援
+// ✅ 舊程式有用到的別名（useLang）
+export const useLang = useLanguage;
+
+// ✅ 如果你之後想用這個名字也可以
 export const useLanguageContext = useLanguage;

@@ -8,7 +8,6 @@
     "language_en": "English",
     "language_zh": "中文",
     "all_tools": "所有工具"
-
   },
   "auth": {
     "login": "登入",
@@ -58,7 +57,6 @@
     "terms": "服務條款",
     "contact": "聯絡我們"
   },
-
   "queue": {
     "title": "轉檔佇列",
     "waiting": "等待中",
@@ -67,7 +65,6 @@
     "done": "已完成",
     "error": "錯誤"
   },
-
   "video_settings": {
     "title": "影片進階設定",
     "codec": "編碼格式",
@@ -76,18 +73,15 @@
     "frame_rate": "影格率 (fps)",
     "cancel": "取消",
     "save": "儲存設定",
-
     "codec_h264": "H.264 (MP4)",
     "codec_h265": "H.265 / HEVC",
     "codec_vp9": "VP9 (WebM)",
     "codec_av1": "AV1",
-
     "res_2160p": "4K (2160p)",
     "res_1440p": "2K (1440p)",
     "res_1080p": "Full HD (1080p)",
     "res_720p": "HD (720p)",
     "res_480p": "SD (480p)",
-
     "ar_169": "16:9（寬螢幕）",
     "ar_916": "9:16（手機直式）",
     "ar_43": "4:3",

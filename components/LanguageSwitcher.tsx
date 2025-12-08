@@ -21,7 +21,8 @@ export function LanguageSwitcher() {
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          {t('navbar.language_en')}
+         
+          {t("navbar.language_label", "Language")}
         </button>
         <button
           type="button"

@@ -1,6 +1,7 @@
 // app/tools/[slug]/page.tsx
 
 import React from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import FileUpload from "@/components/FileUpload";
 import { AdSlot } from "@/components/AdSlot";
@@ -19,7 +20,6 @@ export default function ToolPage({ params }: ToolPageProps) {
     return notFound();
   }
 
-  // 先用英文 SEO 文案，之後如果要做多語 metadata 再加
   const title = tool.title.en;
   const description = tool.shortDescription.en;
 
@@ -28,7 +28,7 @@ export default function ToolPage({ params }: ToolPageProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* 簡單 Header（沿用首頁 logo） */}
+      {/* Header：Logo + 回首頁按鈕 */}
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3">
@@ -39,41 +39,70 @@ export default function ToolPage({ params }: ToolPageProps) {
               Wise<span className="text-blue-600">Convert</span>
             </span>
           </a>
-          <div className="text-xs sm:text-sm text-slate-500">
-            {tool.category.toUpperCase()} TOOL
+          <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-500">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
+            >
+              <span>←</span>
+              <span>Back to Home</span>
+            </Link>
+            <span className="hidden sm:inline">
+              {tool.category.toUpperCase()} TOOL
+            </span>
           </div>
         </div>
       </header>
 
       <main className="flex-1 pb-20 lg:pb-0">
         <section className="bg-slate-50 border-b border-slate-200">
-          <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 py-10 lg:py-14">
-            {/* Hero for this tool */}
-            <div className="mb-8 max-w-3xl">
-              <h1 className="text-3xl sm:text-[34px] font-semibold text-slate-900 mb-3">
+          <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 py-8 lg:py-10">
+            {/* 上方廣告：桌機 + 手機 */}
+            <div className="mb-6">
+              <div className="hidden lg:block">
+                <AdSlot
+                  slotId="tool-top-desktop"
+                  label="AD TOOL TOP — 970×90 / 728×90"
+                  className="h-20"
+                />
+              </div>
+              <div className="lg:hidden">
+                <AdSlot
+                  slotId="tool-top-mobile"
+                  label="AD TOOL TOP MOBILE — 320×100"
+                  className="h-16"
+                />
+              </div>
+            </div>
+
+            {/* Breadcrumb + Hero */}
+            <div className="mb-6 max-w-3xl">
+              <div className="text-[11px] text-slate-400 mb-2">
+                <Link href="/" className="hover:underline">
+                  Home
+                </Link>
+                <span className="mx-1">/</span>
+                <Link href="/tools" className="hover:underline">
+                  Tools
+                </Link>
+                <span className="mx-1">/</span>
+                <span>{title}</span>
+              </div>
+              <h1 className="text-3xl sm:text-[34px] font-semibold text-slate-900 mb-2">
                 {title}
               </h1>
-              <p className="text-sm sm:text-base text-slate-500">
+              <p className="text-sm sm:text-base text-slate-500 mb-1.5">
                 {description}
               </p>
-              <p className="mt-2 text-xs text-slate-400">
-                Supported input: {tool.inputFormats.join(", ").toUpperCase()} •
-                {"  "}
+              <p className="text-xs text-slate-400">
+                Supported input: {tool.inputFormats.join(", ").toUpperCase()} •{" "}
                 Output: {tool.outputFormats.join(", ").toUpperCase()}
               </p>
             </div>
 
-            {/* Desktop top banner */}
-            <div className="mb-4 hidden lg:block">
-              <AdSlot
-                slotId="tool-top-desktop"
-                label="AD TOOL TOP — 970×90 / 728×90"
-                className="h-20"
-              />
-            </div>
-
-            {/* Main card */}
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-6">
+            {/* 主體：左 FileUpload + 右說明 + 側邊廣告 */}
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-6 items-start">
+              {/* 左側：上傳區 + 手機中間廣告 */}
               <div className="space-y-4">
                 <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm px-4 sm:px-8 py-6">
                   <FileUpload
@@ -81,7 +110,8 @@ export default function ToolPage({ params }: ToolPageProps) {
                     outputFormat={primaryOutput}
                   />
                 </div>
-                {/* Mobile in-content ad */}
+
+                {/* 手機 in-content 廣告 */}
                 <div className="lg:hidden">
                   <AdSlot
                     slotId="tool-in-content-mobile"
@@ -91,12 +121,11 @@ export default function ToolPage({ params }: ToolPageProps) {
                 </div>
               </div>
 
-              {/* Right side: simple FAQ / description */}
-              <aside className="space-y-4 text-sm text-slate-600">
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+              {/* 右側：說明 + 側邊大廣告 */}
+              <aside className="space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
                   <h2 className="text-base font-semibold text-slate-900 mb-2">
-                    How this {primaryInput ?? ""} to {primaryOutput} converter
-                    works
+                    How this converter works
                   </h2>
                   <ol className="list-decimal list-inside space-y-1 text-xs sm:text-sm">
                     <li>Upload your file using drag & drop or click.</li>
@@ -107,21 +136,61 @@ export default function ToolPage({ params }: ToolPageProps) {
                   </ol>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
                   <h3 className="text-sm font-semibold text-slate-900 mb-1">
                     Why use WiseConvert?
                   </h3>
                   <ul className="list-disc list-inside space-y-1 text-xs sm:text-sm">
                     <li>No software install, all in browser.</li>
                     <li>Fast cloud processing and secure transfer.</li>
-                    <li>More tools coming soon: images, video, audio & PDF.</li>
+                    <li>
+                      More tools coming soon: images, video, audio &amp; PDF.
+                    </li>
                   </ul>
                 </div>
+
+                {/* 右側 300x600 廣告（桌機） */}
+                <div className="hidden lg:block">
+                  <AdSlot
+                    slotId="tool-sidebar-right"
+                    label="AD TOOL SIDEBAR — 300×600"
+                    className="w-full h-[600px]"
+                  />
+                </div>
               </aside>
+            </div>
+
+            {/* 下方：底部 Banner 廣告 */}
+            <div className="mt-8">
+              <div className="hidden lg:flex">
+                <AdSlot
+                  slotId="tool-bottom-desktop"
+                  label="AD TOOL BOTTOM — 970×90 / 728×90"
+                  className="h-20"
+                />
+              </div>
+              <div className="lg:hidden">
+                <AdSlot
+                  slotId="tool-bottom-mobile"
+                  label="AD TOOL BOTTOM MOBILE — 320×100"
+                  className="h-16"
+                />
+              </div>
             </div>
           </div>
         </section>
       </main>
+
+      {/* 手機 Sticky 底部廣告（工具頁專用） */}
+      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden">
+        <div className="max-w-screen-sm mx-auto px-3 pb-2">
+          <AdSlot
+            slotId="tool-sticky-mobile"
+            label="AD TOOL STICKY MOBILE — 320×50"
+            className="h-12 shadow-lg"
+          />
+        </div>
+      </div>
     </div>
   );
 }

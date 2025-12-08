@@ -1,32 +1,59 @@
 {
-  "site": {
-    "title": "WiseConvert - 免費又安全的線上轉檔工具",
-    "subtitle": "數秒內快速轉換圖片、影片與文件格式。"
-  },
   "navbar": {
-    "home": "首頁",
-    "tools": "工具列表",
-    "language": "語言",
+    "convert": "開始轉檔",
+    "how_it_works": "使用說明",
+    "why": "為什麼選 WiseConvert",
+    "pricing": "方案與價格",
+    "language_label": "語言",
     "language_en": "English",
     "language_zh": "中文"
   },
-  "upload": {
-    "title": "上傳您的檔案",
-    "subtitle": "拖曳檔案到此處，或點擊選擇檔案。",
-    "button_select": "選擇檔案",
-    "button_convert": "開始轉檔",
-    "status_waiting": "等待中",
-    "status_uploading": "上傳中",
-    "status_processing": "處理中",
-    "status_done": "完成",
-    "status_error": "錯誤"
+  "auth": {
+    "login": "登入",
+    "signup": "免費註冊"
   },
-  "settings": {
-    "title": "轉檔設定",
-    "resolution": "解析度",
-    "format": "輸出格式",
-    "quality": "品質",
-    "save": "儲存",
-    "cancel": "取消"
+  "hero": {
+    "title": "線上檔案轉換器",
+    "subtitle": "快速、安全地把影片、圖片、音訊、PDF 一鍵轉成你要的格式。"
+  },
+  "why": {
+    "title": "為什麼選擇 WiseConvert？",
+    "fast_title": "雲端高速轉檔",
+    "fast_desc": "高效能伺服器，幫你在雲端完成所有轉檔工作。",
+    "privacy_title": "隱私優先",
+    "privacy_desc": "檔案會加密傳輸，並在短時間內自動刪除。",
+    "all_in_one_title": "一站式工具",
+    "all_in_one_desc": "圖片、影片、音訊、文件一次搞定。"
+  },
+  "how_it_works": {
+    "title": "如何使用",
+    "step1_title": "上傳檔案",
+    "step1_desc": "點選或直接拖拉上傳。",
+    "step2_title": "選擇輸出格式",
+    "step2_desc": "支援 JPG、MP4、PDF、MP3…等多種格式。",
+    "step3_title": "雲端轉檔",
+    "step3_desc": "由伺服器在背景幫你完成轉換。",
+    "step4_title": "立即下載",
+    "step4_desc": "幾秒鐘內即可取得轉檔後檔案。"
+  },
+  "pricing": {
+    "title": "免費開始，需要再升級。",
+    "free_title": "免費方案",
+    "free_desc": "適合一般日常使用。",
+    "free_price": "$0",
+    "free_benefit1": "✓ 單檔最大 1GB",
+    "free_benefit2": "✓ 標準轉檔速度",
+    "free_benefit3": "✓ 基本工具功能",
+    "pro_title": "Pro 專業方案",
+    "pro_desc": "即將推出，適合進階使用者。",
+    "pro_price": "$19",
+    "pro_benefit1": "✓ 更快的轉檔速度",
+    "pro_benefit2": "✓ 更高檔案大小上限",
+    "pro_benefit3": "✓ 優先客服支援"
+  },
+  "footer": {
+    "privacy": "隱私權政策",
+    "terms": "服務條款",
+    "contact": "聯絡我們"
   }
 }

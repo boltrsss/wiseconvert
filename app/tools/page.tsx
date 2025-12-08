@@ -5,6 +5,7 @@ import React from "react";
 import Link from "next/link";
 import { TOOLS } from "@/lib/toolsConfig";
 import { useLang } from "@/context/LanguageContext";
+import { AdSlot } from "@/components/AdSlot";
 
 export const runtime = "edge";
 
@@ -53,7 +54,7 @@ export default function ToolsIndexPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* Header 簡版 */}
+      {/* Header */}
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3">
@@ -64,8 +65,18 @@ export default function ToolsIndexPage() {
               Wise<span className="text-blue-600">Convert</span>
             </span>
           </a>
-          <div className="text-xs sm:text-sm text-slate-500">
-            {lang === "zh" ? "全部工具" : "All tools"}
+          {/* 右上角：回首頁 + 簡單文字 */}
+          <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-500">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
+            >
+              <span>←</span>
+              <span>{lang === "zh" ? "回首頁" : "Back to Home"}</span>
+            </Link>
+            <span className="hidden sm:inline">
+              {lang === "zh" ? "全部工具" : "All tools"}
+            </span>
           </div>
         </div>
       </header>
@@ -73,8 +84,16 @@ export default function ToolsIndexPage() {
       <main className="flex-1 pb-20 lg:pb-0">
         <section className="py-10 lg:py-14">
           <div className="max-w-screen-2xl mx-auto px-6 lg:px-10">
-            <div className="mb-8 max-w-3xl">
-              <h1 className="text-3xl sm:text-[34px] font-semibold text-slate-900 mb-3">
+            {/* Title + SubTitle + Breadcrumb */}
+            <div className="mb-6 max-w-3xl space-y-2">
+              <div className="text-[11px] text-slate-400">
+                <Link href="/" className="hover:underline">
+                  {lang === "zh" ? "首頁" : "Home"}
+                </Link>
+                <span className="mx-1">/</span>
+                <span>{lang === "zh" ? "轉檔工具" : "Tools"}</span>
+              </div>
+              <h1 className="text-3xl sm:text-[34px] font-semibold text-slate-900">
                 {pageTitle}
               </h1>
               <p className="text-sm sm:text-base text-slate-500">
@@ -82,6 +101,25 @@ export default function ToolsIndexPage() {
               </p>
             </div>
 
+            {/* 上方廣告：桌機 & 手機 */}
+            <div className="mb-6">
+              <div className="hidden lg:block">
+                <AdSlot
+                  slotId="tools-top-desktop"
+                  label="AD TOOLS TOP — 970×90 / 728×90"
+                  className="h-20"
+                />
+              </div>
+              <div className="lg:hidden">
+                <AdSlot
+                  slotId="tools-top-mobile"
+                  label="AD TOOLS TOP MOBILE — 320×100"
+                  className="h-16"
+                />
+              </div>
+            </div>
+
+            {/* 工具群組列表 */}
             <div className="space-y-8">
               {Object.entries(grouped).map(([cat, tools]) => (
                 <div key={cat} className="space-y-3">
@@ -121,9 +159,38 @@ export default function ToolsIndexPage() {
                 </div>
               ))}
             </div>
+
+            {/* 下方廣告：底部 banner */}
+            <div className="mt-10">
+              <div className="hidden lg:flex">
+                <AdSlot
+                  slotId="tools-bottom-desktop"
+                  label="AD TOOLS BOTTOM — 970×90 / 728×90"
+                  className="h-20"
+                />
+              </div>
+              <div className="lg:hidden">
+                <AdSlot
+                  slotId="tools-bottom-mobile"
+                  label="AD TOOLS BOTTOM MOBILE — 320×100"
+                  className="h-16"
+                />
+              </div>
+            </div>
           </div>
         </section>
       </main>
+
+      {/* 手機 Sticky 底部廣告（tools 頁也吃一份） */}
+      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden">
+        <div className="max-w-screen-sm mx-auto px-3 pb-2">
+          <AdSlot
+            slotId="tools-sticky-mobile"
+            label="AD TOOLS STICKY MOBILE — 320×50"
+            className="h-12 shadow-lg"
+          />
+        </div>
+      </div>
     </div>
   );
 }

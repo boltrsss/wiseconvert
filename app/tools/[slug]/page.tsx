@@ -28,7 +28,7 @@ export default function ToolPage({ params }: ToolPageProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* Header：Logo + 回首頁按鈕 */}
+      {/* Header：Logo + 回首頁 */}
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3">
@@ -57,7 +57,7 @@ export default function ToolPage({ params }: ToolPageProps) {
       <main className="flex-1 pb-20 lg:pb-0">
         <section className="bg-slate-50 border-b border-slate-200">
           <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 py-8 lg:py-10">
-            {/* 上方廣告：桌機 + 手機 */}
+            {/* TOP 廣告：桌機 + 手機 */}
             <div className="mb-6">
               <div className="hidden lg:block">
                 <AdSlot
@@ -100,9 +100,9 @@ export default function ToolPage({ params }: ToolPageProps) {
               </p>
             </div>
 
-            {/* 主體：左 FileUpload + 右說明 + 側邊廣告 */}
+            {/* 主體：左工具 + 右側欄（廣告優先，說明在下方） */}
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-6 items-start">
-              {/* 左側：上傳區 + 手機中間廣告 */}
+              {/* 左側：FileUpload + 中間橫幅 */}
               <div className="space-y-4">
                 <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm px-4 sm:px-8 py-6">
                   <FileUpload
@@ -111,18 +111,44 @@ export default function ToolPage({ params }: ToolPageProps) {
                   />
                 </div>
 
-                {/* 手機 in-content 廣告 */}
-                <div className="lg:hidden">
-                  <AdSlot
-                    slotId="tool-in-content-mobile"
-                    label="AD TOOL IN-CONTENT — 320×100"
-                    className="h-20"
-                  />
+                {/* 左側：in-content 廣告（桌機橫幅 + 手機） */}
+                <div className="space-y-3">
+                  <div className="hidden lg:flex">
+                    <AdSlot
+                      slotId="tool-in-content-desktop"
+                      label="AD TOOL IN-CONTENT — 728×90 / 468×60"
+                      className="h-20 w-full"
+                    />
+                  </div>
+                  <div className="lg:hidden">
+                    <AdSlot
+                      slotId="tool-in-content-mobile"
+                      label="AD TOOL IN-CONTENT — 320×100"
+                      className="h-20"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* 右側：說明 + 側邊大廣告 */}
+              {/* 右側：側欄廣告 + 說明（說明在最下方） */}
               <aside className="space-y-4">
+                {/* 兩個 300×250 廣告位 */}
+                <div className="hidden lg:block">
+                  <AdSlot
+                    slotId="tool-sidebar-top"
+                    label="AD TOOL SIDEBAR TOP — 300×250"
+                    className="w-full h-[250px]"
+                  />
+                </div>
+                <div className="hidden lg:block">
+                  <AdSlot
+                    slotId="tool-sidebar-middle"
+                    label="AD TOOL SIDEBAR MID — 300×250"
+                    className="w-full h-[250px]"
+                  />
+                </div>
+
+                {/* 說明區塊放在側欄最下方 */}
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
                   <h2 className="text-base font-semibold text-slate-900 mb-2">
                     How this converter works
@@ -148,25 +174,16 @@ export default function ToolPage({ params }: ToolPageProps) {
                     </li>
                   </ul>
                 </div>
-
-                {/* 右側 300x600 廣告（桌機） */}
-                <div className="hidden lg:block">
-                  <AdSlot
-                    slotId="tool-sidebar-right"
-                    label="AD TOOL SIDEBAR — 300×600"
-                    className="w-full h-[600px]"
-                  />
-                </div>
               </aside>
             </div>
 
-            {/* 下方：底部 Banner 廣告 */}
+            {/* 底部：全寬 Banner 廣告 */}
             <div className="mt-8">
               <div className="hidden lg:flex">
                 <AdSlot
                   slotId="tool-bottom-desktop"
                   label="AD TOOL BOTTOM — 970×90 / 728×90"
-                  className="h-20"
+                  className="h-20 w-full"
                 />
               </div>
               <div className="lg:hidden">
@@ -181,7 +198,7 @@ export default function ToolPage({ params }: ToolPageProps) {
         </section>
       </main>
 
-      {/* 手機 Sticky 底部廣告（工具頁專用） */}
+      {/* 手機 Sticky 底部廣告（工具頁） */}
       <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden">
         <div className="max-w-screen-sm mx-auto px-3 pb-2">
           <AdSlot

@@ -1,56 +1,76 @@
-'use client';
+// /context/LanguageContext.tsx
+"use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { detectLang, getDictionary, Lang } from '@/lib/i18n';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { loadLocale } from "@/lib/i18n";
 
-type LanguageContextValue = {
-  lang: Lang;
-  t: (path: string) => string;
-  setLang: (lang: Lang) => void;
-};
+// 目前只用到這兩種語系
+export type Language = "en" | "zh";
 
-const LanguageContext = createContext<LanguageContextValue | null>(null);
+type Messages = Record<string, string>;
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Lang>('en');
+interface LanguageContextValue {
+  lang: Language;
+  setLang: (lang: Language) => void;
+  t: (key: string, fallback?: string) => string;
+}
 
-  // load initial lang (localStorage > browser detect)
+const LanguageContext = createContext<LanguageContextValue | undefined>(
+  undefined
+);
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [lang, setLang] = useState<Language>("en");
+  const [messages, setMessages] = useState<Messages>({});
+
+  // 初始可以用瀏覽器語系，之後用者切換時就用選單的值
   useEffect(() => {
-    const stored =
-      typeof window !== 'undefined'
-        ? (localStorage.getItem('wise_lang') as Lang | null)
-        : null;
+    let cancelled = false;
 
-    setLangState(stored || detectLang());
-  }, []);
-
-  const setLang = (newLang: Lang) => {
-    setLangState(newLang);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('wise_lang', newLang);
+    async function load() {
+      try {
+        const data = await loadLocale(lang);
+        if (!cancelled) {
+          setMessages(data as Messages);
+        }
+      } catch (err) {
+        console.error("[i18n] loadLocale error", err);
+        if (!cancelled) {
+          setMessages({});
+        }
+      }
     }
-  };
 
-  const dict = getDictionary(lang);
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [lang]);
 
-  // reading nested keys: t("upload.status_done")
-  const t = (path: string): string => {
-    return (
-      path.split('.').reduce<any>((acc, key) => {
-        return acc?.[key];
-      }, dict) ?? path
-    );
-  };
+  const t = (key: string, fallback?: string) =>
+    messages[key] ?? fallback ?? key;
 
   return (
-    <LanguageContext.Provider value={{ lang, t, setLang }}>
+    <LanguageContext.Provider value={{ lang, setLang, t }}>
       {children}
     </LanguageContext.Provider>
   );
 }
 
-export function useLang() {
+// ✅ 提供 useLanguage 給 Header / ConversionQueue / 未來元件使用
+export function useLanguage() {
   const ctx = useContext(LanguageContext);
-  if (!ctx) throw new Error('useLang must be used within LanguageProvider');
+  if (!ctx) {
+    throw new Error("useLanguage must be used within a LanguageProvider");
+  }
   return ctx;
 }
+
+// 🔁 如果你之前不小心用過這個名字，也一併支援
+export const useLanguageContext = useLanguage;

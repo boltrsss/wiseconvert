@@ -24,20 +24,75 @@ export const TOOLS: ToolDefinition[] = [
     outputFormats: ["png"],
     title: {
       en: "JPG to PNG Converter",
-      zh: "JPG 轉 PNG 線上工具",
+      zh: "JPG 轉 PNG 線上轉檔工具"
     },
     shortDescription: {
-      en: "Convert JPG images to high-quality PNG in seconds.",
-      zh: "把 JPG 圖片快速轉成高品質 PNG 檔。",
+      en: "Convert JPG/JPEG images to high-quality PNG in your browser.",
+      zh: "將 JPG/JPEG 圖片一鍵轉成高品質 PNG，免安裝、免註冊。"
     },
+    // 新增：給 tools/[slug] page 用的長說明 & SEO
     seoTitle: {
-      en: "JPG to PNG – Free Online Converter | WiseConvert",
-      zh: "JPG 轉 PNG 線上免費工具 | WiseConvert",
+      en: "JPG to PNG Converter – Free Online Image Converter | WiseConvert",
+      zh: "JPG 轉 PNG 線上免費轉檔工具｜WiseConvert"
     },
     seoDescription: {
-      en: "Free online JPG to PNG converter. Upload your JPG images and get clean, high-quality PNG files instantly in your browser.",
-      zh: "免費線上 JPG 轉 PNG 工具，免安裝軟體，在瀏覽器即可把 JPG 圖片轉成高品質 PNG。",
+      en: "Free online JPG to PNG converter. Keep image quality, remove background transparently, and convert multiple JPG/JPEG files to PNG in your browser.",
+      zh: "免費線上 JPG 轉 PNG 工具，保留畫質、支援透明背景，多張 JPG/JPEG 圖片一次轉成 PNG，全部在瀏覽器完成。"
     },
+    longDescription: {
+      en: [
+        "WiseConvert’s JPG to PNG converter lets you quickly turn JPG/JPEG images into high-quality PNG files directly in your browser.",
+        "No software installation, no registration. Upload your images, choose PNG as output, and download your converted files in seconds."
+      ],
+      zh: [
+        "WiseConvert 的 JPG 轉 PNG 工具，讓你在瀏覽器中快速把 JPG/JPEG 圖片轉成高品質 PNG 檔。",
+        "不需安裝軟體、不用註冊帳號，上傳圖片、選擇 PNG 輸出格式，幾秒鐘內就能下載完成的檔案。"
+      ]
+    },
+    useCases: {
+      en: [
+        "Keep transparent background for logos and icons.",
+        "Prepare images for web design or UI assets.",
+        "Reduce JPG artifacts by exporting to PNG.",
+        "Convert screenshots to lossless PNG for better readability."
+      ],
+      zh: [
+        "將 Logo、Icon 轉成 PNG，保留透明背景。",
+        "為網頁設計或介面素材準備 PNG 圖片。",
+        "把壓縮感較重的 JPG 轉成 PNG，減少壓縮雜訊。",
+        "把螢幕截圖轉成無損 PNG，讓文字更清晰易讀。"
+      ]
+    },
+    faq: {
+      en: [
+        {
+          q: "Will converting JPG to PNG improve image quality?",
+          a: "PNG will not magically add details, but it preserves existing quality better and avoids additional compression artifacts compared to JPG."
+        },
+        {
+          q: "Is there a file size limit?",
+          a: "In the free plan, each file can be up to 1GB. Larger limits may be available in the Pro plan in the future."
+        },
+        {
+          q: "Are my images stored on your servers?",
+          a: "Files are processed in the cloud, then automatically deleted after a short period as part of our privacy-first design."
+        }
+      ],
+      zh: [
+        {
+          q: "JPG 轉成 PNG 會變比較清楚嗎？",
+          a: "PNG 不會神奇變高清，但會避免再次壓縮造成的失真，對有文字或排版的圖片會比較乾淨。"
+        },
+        {
+          q: "檔案有大小限制嗎？",
+          a: "目前免費方案單檔上限為 1GB，未來 Pro 方案會提供更高上限。"
+        },
+        {
+          q: "你們會長期保存我的圖片嗎？",
+          a: "檔案只會在雲端暫存處理，完成後會在短時間內自動刪除，設計上以隱私優先。"
+        }
+      ]
+    }
   },
   {
     slug: "png-to-jpg",

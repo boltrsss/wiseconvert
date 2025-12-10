@@ -21,10 +21,12 @@ import {
 
 type FileUploadProps = {
   inputFormat?: string; // 顯示用，例如 "JPG"
-  outputFormat?: string; // 預設輸出格式，例如 "PNG" / "MP4"
+  outputFormat?: string; // 預設輸出格式，例如 "PNG" / "GIF" / "MP4"
 };
 
-const OUTPUT_OPTIONS = ["png", "jpg", "jpeg", "webp"];
+// 只有「圖片工具」可以切換的輸出格式
+const IMAGE_OUTPUT_OPTIONS = ["png", "jpg", "jpeg", "webp"] as const;
+type ImageOutput = (typeof IMAGE_OUTPUT_OPTIONS)[number];
 
 export default function FileUpload({
   inputFormat,
@@ -37,15 +39,19 @@ export default function FileUpload({
 
   const { lang } = useLang(); // lang: "en" | "zh"
 
-  // ✅ 專門給錯誤訊息用的小 helper
   const getErrorText = (key: ErrorMessageKey) => errorMessages[key][lang];
 
-  // 全域輸出格式選單（預設用 props）
-  const [selectedOutput, setSelectedOutput] = useState(
-    (outputFormat || "png").toLowerCase()
+  // ==== 判斷這個工具的「基礎輸出格式」 ====
+  const baseOutput = (outputFormat || "png").toLowerCase();
+  const isImageTool = IMAGE_OUTPUT_OPTIONS.includes(
+    baseOutput as ImageOutput
   );
 
-  // ✅ 影片進階設定：狀態 & Modal 開關
+  // 圖片工具：可以切換輸出；非圖片工具：輸出固定為 baseOutput
+  const [selectedOutput, setSelectedOutput] = useState(baseOutput);
+  const effectiveOutput = isImageTool ? selectedOutput : baseOutput;
+
+  // ==== 影片進階設定 ====
   const [isVideoSettingsOpen, setIsVideoSettingsOpen] = useState(false);
   const [videoSettings, setVideoSettings] = useState<VideoSettings>({
     codec: "h264",
@@ -54,10 +60,12 @@ export default function FileUpload({
     frameRate: 30,
   });
 
-  // ✅ 判斷：這個 FileUpload 是不是影片工具（只看 props 的 outputFormat，不受下拉選單影響）
-  const baseOutput = (outputFormat || "png").toLowerCase();
+  // 影片工具：mp4 / webm / gif / mp3 這類（用 baseOutput 判斷）
   const isVideoTool =
-    baseOutput === "mp4" || baseOutput === "webm" || baseOutput === "gif";
+    baseOutput === "mp4" ||
+    baseOutput === "webm" ||
+    baseOutput === "gif" ||
+    baseOutput === "mp3";
 
   const addItem = (file: File): UploadItem => {
     const id = crypto.randomUUID();
@@ -71,7 +79,8 @@ export default function FileUpload({
       isVideo: file.type.startsWith("video/"),
       status: "waiting" as UploadStatus,
       progress: 0,
-      outputFormat: selectedOutput,
+      // 每個檔案記住當下的有效輸出格式
+      outputFormat: effectiveOutput,
     };
 
     setItems((prev) => [...prev, item]);
@@ -96,7 +105,6 @@ export default function FileUpload({
 
   const runJobPipeline = async (item: UploadItem) => {
     try {
-      // 快速擋掉 AVIF（不用丟到後端）
       const ext = item.name.split(".").pop()?.toLowerCase();
       if (ext === "avif") {
         handleUnsupportedFormat(item.id);
@@ -105,24 +113,24 @@ export default function FileUpload({
 
       updateItem(item.id, { status: "uploading", progress: 0 });
 
-      // 1. 拿上傳 URL
+      // 1. 取得上傳 URL
       const uploadInfo = await getUploadUrl(item.file);
 
       // 2. 上傳到 S3
       await uploadFileToS3(item.file, uploadInfo.upload_url);
       updateItem(item.id, { status: "processing", progress: 10 });
 
-      // 3. 呼叫轉檔 API，使用每個 item 自己的 outputFormat
+      // 3. 呼叫轉檔 API，使用檔案自己的 outputFormat 或目前有效輸出格式
       const targetFormat = (
-        item.outputFormat || selectedOutput || "png"
+        item.outputFormat || effectiveOutput || "png"
       ).toLowerCase();
 
-      // 👉 之後如果要把 videoSettings 傳給後端，可以在這裡一起塞進去
+      // ⚠️ 目前 videoSettings 還沒送到後端，先保留在前端
       const { job_id } = await startConversion(uploadInfo.key, targetFormat);
 
       updateItem(item.id, { jobId: job_id, status: "processing" });
 
-      // 4. polling 狀態
+      // 4. Polling 狀態
       const poll = async (): Promise<void> => {
         const res: StatusResponse = await getJobStatus(job_id);
 
@@ -187,8 +195,7 @@ export default function FileUpload({
         void runJobPipeline(item);
       }
     },
-    // ✅ 依賴輸出格式 & 語系（語系變更時，新加入檔案會拿到新的錯誤語言）
-    [selectedOutput, lang]
+    [effectiveOutput, lang]
   );
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
@@ -223,11 +230,11 @@ export default function FileUpload({
     }
   };
 
-  const displayOutput = (selectedOutput || outputFormat || "png").toUpperCase();
+  const displayOutput = (effectiveOutput || "png").toUpperCase();
 
   return (
     <div className="w-full flex flex-col gap-4">
-      {/* 🔴 Global Error Banner */}
+      {/* Global error */}
       {globalError && (
         <div className="w-full max-w-3xl mx-auto mb-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start justify-between gap-3">
           <div className="flex gap-2">
@@ -244,7 +251,7 @@ export default function FileUpload({
         </div>
       )}
 
-      {/* 上方：輸出格式選單 +（影片工具才顯示）進階影片設定按鈕 */}
+      {/* 上方：輸出說明 +（圖片工具才有）下拉 +（影片工具）進階設定 */}
       <div className="w-full max-w-3xl mx-auto flex items-center justify-between text-sm mb-1">
         <div className="text-gray-600">
           {inputFormat
@@ -257,24 +264,27 @@ export default function FileUpload({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500">
-              {lang === "zh" ? "輸出格式" : "Output format"}
-            </span>
-            <select
-              className="border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={selectedOutput}
-              onChange={(e) => setSelectedOutput(e.target.value)}
-            >
-              {OUTPUT_OPTIONS.map((fmt) => (
-                <option key={fmt} value={fmt}>
-                  {fmt.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* 只有圖片工具可以選擇輸出格式 */}
+          {isImageTool && (
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">
+                {lang === "zh" ? "輸出格式" : "Output format"}
+              </span>
+              <select
+                className="border border-gray-300 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={selectedOutput}
+                onChange={(e) => setSelectedOutput(e.target.value)}
+              >
+                {IMAGE_OUTPUT_OPTIONS.map((fmt) => (
+                  <option key={fmt} value={fmt}>
+                    {fmt.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {/* ✅ 只有影片工具才顯示按鈕（例如 /tools/mov-to-mp4, /tools/video-to-gif） */}
+          {/* 影片工具：顯示進階影片設定按钮 */}
           {isVideoTool && (
             <button
               type="button"
@@ -360,7 +370,7 @@ export default function FileUpload({
                     <div className="text-xs text-gray-400">
                       {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
                       {item.status} · →{" "}
-                      {item.outputFormat?.toUpperCase()}
+                      {(item.outputFormat || effectiveOutput).toUpperCase()}
                     </div>
                     <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                       <div
@@ -376,7 +386,6 @@ export default function FileUpload({
                     </div>
                   </div>
 
-                  {/* Download 按鈕 */}
                   {item.status === "done" && downloadUrl && (
                     <a
                       href={downloadUrl}
@@ -389,7 +398,6 @@ export default function FileUpload({
                   )}
                 </div>
 
-                {/* 單筆錯誤文字（小字） */}
                 {item.errorMessage && (
                   <div className="text-xs text-red-500 mt-0.5">
                     {item.errorMessage}
@@ -401,7 +409,7 @@ export default function FileUpload({
         </ul>
       </div>
 
-      {/* ✅ 進階影片設定 Modal */}
+      {/* 影片進階設定 Modal */}
       <VideoSettingsModal
         open={isVideoSettingsOpen}
         value={videoSettings}

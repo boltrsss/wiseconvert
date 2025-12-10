@@ -6,6 +6,7 @@ import Link from "next/link";
 import { TOOLS } from "@/lib/toolsConfig";
 import { useLang } from "@/context/LanguageContext";
 import { AdSlot } from "@/components/AdSlot";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"; // ✅ 新增
 
 export const runtime = "edge";
 
@@ -89,6 +90,7 @@ export default function ToolsIndexPage() {
       {/* Header */}
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
+          {/* Logo */}
           <a href="/" className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
               W
@@ -97,18 +99,24 @@ export default function ToolsIndexPage() {
               Wise<span className="text-blue-600">Convert</span>
             </span>
           </a>
-          {/* 右上角：回首頁 + 簡單文字 */}
-          <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-500">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
-            >
-              <span>←</span>
-              <span>{lang === "zh" ? "回首頁" : "Back to Home"}</span>
-            </Link>
-            <span className="hidden sm:inline">
-              {lang === "zh" ? "全部工具" : "All tools"}
-            </span>
+
+          {/* 右上角：回首頁 + All tools + 語言切換 */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-500">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
+              >
+                <span>←</span>
+                <span>{lang === "zh" ? "回首頁" : "Back to Home"}</span>
+              </Link>
+              <span className="hidden sm:inline">
+                {lang === "zh" ? "全部工具" : "All tools"}
+              </span>
+            </div>
+
+            {/* ✅ 語言切換器 */}
+            <LanguageSwitcher />
           </div>
         </div>
       </header>
@@ -151,7 +159,7 @@ export default function ToolsIndexPage() {
               </div>
             </div>
 
-            {/* ✅ 搜尋列 + 工具數量 */}
+            {/* 搜尋列 + 工具數量 */}
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-xs sm:text-sm text-slate-500">
                 {lang === "zh"

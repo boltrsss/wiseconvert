@@ -55,13 +55,23 @@ export async function startConversion(
   targetFormat: string,
   videoSettings?: VideoSettings
 ): Promise<StartConversionResponse> {
+  // 統一把前端的 camelCase 轉成後端比較好 parse 的 key
+  const settingsPayload = videoSettings
+    ? {
+        codec: videoSettings.codec,
+        resolution: videoSettings.resolution,
+        aspectRatio: videoSettings.aspectRatio,
+        frameRate: videoSettings.frameRate,
+      }
+    : null;
+
   const res = await fetch(`${API_BASE}/api/start-conversion`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       s3_key: s3Key,
       target_format: targetFormat,
-      settings: videoSettings,
+      settings: settingsPayload,
     }),
   });
 
@@ -78,6 +88,7 @@ export type StatusResponse = {
   progress?: number;
   message?: string;
   output_s3_key?: string;
+  file_url?: string;
   raw?: Record<string, any>;
 };
 

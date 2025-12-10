@@ -1,11 +1,12 @@
 // app/page.tsx
-"use client"; // ✅ 讓這頁可以用 hook
+"use client"; // ✅ 這頁要用 hook，所以是 client component
 
 import React from "react";
 import { AdSlot } from "@/components/AdSlot";
 import FileUpload from "@/components/FileUpload";
 import { useLang } from "@/context/LanguageContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import Link from "next/link";
 
 export default function HomePage() {
   const { t } = useLang();
@@ -39,9 +40,10 @@ export default function HomePage() {
             <a href="#pricing" className="hover:text-blue-600">
               {t("navbar.pricing")}
             </a>
-            <a href="/tools" className="hover:text-blue-600">
+            {/* ✅ 新增：直接連到 /tools 的 All tools */}
+            <Link href="/tools" className="hover:text-blue-600">
               {t("navbar.all_tools")}
-            </a>
+            </Link>
           </nav>
 
           {/* 右側：登入 / 註冊 + 語言切換 */}
@@ -55,7 +57,6 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* 多語系切換器 */}
             <LanguageSwitcher />
           </div>
         </div>
@@ -206,23 +207,23 @@ export default function HomePage() {
               {[
                 {
                   step: 1,
-                  title: t("how_it_works.step1_title"),
-                  desc: t("how_it_works.step1_desc"),
+                  titleKey: "how_it_works.step1_title",
+                  descKey: "how_it_works.step1_desc",
                 },
                 {
                   step: 2,
-                  title: t("how_it_works.step2_title"),
-                  desc: t("how_it_works.step2_desc"),
+                  titleKey: "how_it_works.step2_title",
+                  descKey: "how_it_works.step2_desc",
                 },
                 {
                   step: 3,
-                  title: t("how_it_works.step3_title"),
-                  desc: t("how_it_works.step3_desc"),
+                  titleKey: "how_it_works.step3_title",
+                  descKey: "how_it_works.step3_desc",
                 },
                 {
                   step: 4,
-                  title: t("how_it_works.step4_title"),
-                  desc: t("how_it_works.step4_desc"),
+                  titleKey: "how_it_works.step4_title",
+                  descKey: "how_it_works.step4_desc",
                 },
               ].map((item) => (
                 <div
@@ -234,10 +235,12 @@ export default function HomePage() {
                       {item.step}
                     </span>
                     <h3 className="text-base font-semibold text-slate-900">
-                      {item.title}
+                      {t(item.titleKey)}
                     </h3>
                   </div>
-                  <p className="text-sm text-slate-500">{item.desc}</p>
+                  <p className="text-sm text-slate-500">
+                    {t(item.descKey)}
+                  </p>
                 </div>
               ))}
             </div>

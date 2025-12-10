@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import FileUpload from "@/components/FileUpload";
 import { AdSlot } from "@/components/AdSlot";
 import { getToolBySlug } from "@/lib/toolsConfig";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher"; // ✅ 新增
 
 export const runtime = "edge";
 
@@ -29,7 +30,7 @@ export default function ToolPage({
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* Header：Logo + 回首頁 */}
+      {/* Header：Logo + 回首頁 + 語言切換 */}
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3">
@@ -40,17 +41,24 @@ export default function ToolPage({
               Wise<span className="text-blue-600">Convert</span>
             </span>
           </a>
-          <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-500">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
-            >
-              <span>←</span>
-              <span>Back to Home</span>
-            </Link>
-            <span className="hidden sm:inline">
-              {tool.category.toUpperCase()} TOOL
-            </span>
+
+          <div className="flex items-center gap-4">
+            {/* 左邊維持原本 Back to Home */}
+            <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-500">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
+              >
+                <span>←</span>
+                <span>Back to Home</span>
+              </Link>
+              <span className="hidden sm:inline">
+                {tool.category.toUpperCase()} TOOL
+              </span>
+            </div>
+
+            {/* 右邊加上語言切換器 */}
+            <LanguageSwitcher />
           </div>
         </div>
       </header>
@@ -178,14 +186,12 @@ export default function ToolPage({
               </aside>
             </div>
 
-            {/* 下方 SEO 內容區（保留原 layout，只是往下補文案） */}
+            {/* 下方 SEO 內容區 */}
             <div className="mt-10 lg:mt-12 max-w-3xl text-sm sm:text-base text-slate-600">
               <h2 className="text-lg sm:text-xl font-semibold text-slate-900 mb-3">
                 When should you use a {title}?
               </h2>
-              <p className="mb-2">
-                {seoDescription}
-              </p>
+              <p className="mb-2">{seoDescription}</p>
               <ul className="list-disc list-inside space-y-1 mb-6">
                 <li>Keep transparent backgrounds for logos and UI icons.</li>
                 <li>Prepare images for web design or app assets.</li>

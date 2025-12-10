@@ -14,80 +14,87 @@ import {
   type ErrorMessageKey,
 } from "@/lib/errorMessages";
 import { useLang } from "@/context/LanguageContext";
-import {
-  VideoSettingsModal,
-  type VideoSettings,
-} from "@/components/VideoSettingsModal";
 
-type FileUploadProps = {
-  inputFormat?: string; // 顯示用，例如 "JPG"
-  outputFormat?: string; // 預設輸出格式，例如 "PNG" / "GIF" / "MP4"
+// ===== 影片進階設定型別（前端用） =====
+type VideoSettingsState = {
+  codec: "h264" | "h265" | "vp9" | "av1";
+  resolution: "2160p" | "1440p" | "1080p" | "720p" | "480p";
+  aspectRatio: "16:9" | "9:16" | "4:3" | "1:1";
+  frameRate: 24 | 30 | 60;
 };
 
-// 只有「圖片工具」可以切換的輸出格式
-const IMAGE_OUTPUT_OPTIONS = ["png", "jpg", "jpeg", "webp"] as const;
-type ImageOutput = (typeof IMAGE_OUTPUT_OPTIONS)[number];
+// 在這個 component 裡，我們用「加強版」UploadItem
+type UploadItemWithVideo = UploadItem & {
+  videoSettings?: VideoSettingsState;
+};
+
+type FileUploadProps = {
+  inputFormat?: string;   // 顯示用，例如 "JPG" 或 "MP4"
+  outputFormat?: string;  // 預設輸出格式，例如 "PNG" 或 "GIF"
+};
+
+const OUTPUT_OPTIONS = ["png", "jpg", "jpeg", "webp"];
 
 export default function FileUpload({
   inputFormat,
   outputFormat = "png",
 }: FileUploadProps) {
-  const [items, setItems] = useState<UploadItem[]>([]);
+  const [items, setItems] = useState<UploadItemWithVideo[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
-  const { lang } = useLang(); // lang: "en" | "zh"
+  const { lang } = useLang();
 
   const getErrorText = (key: ErrorMessageKey) => errorMessages[key][lang];
 
-  // ==== 判斷這個工具的「基礎輸出格式」 ====
-  const baseOutput = (outputFormat || "png").toLowerCase();
-  const isImageTool = IMAGE_OUTPUT_OPTIONS.includes(
-    baseOutput as ImageOutput
+  // 全域輸出格式選單（預設用 props）
+  const [selectedOutput, setSelectedOutput] = useState(
+    (outputFormat || "png").toLowerCase()
   );
 
-  // 圖片工具：可以切換輸出；非圖片工具：輸出固定為 baseOutput
-  const [selectedOutput, setSelectedOutput] = useState(baseOutput);
-  const effectiveOutput = isImageTool ? selectedOutput : baseOutput;
-
-  // ==== 影片進階設定 ====
-  const [isVideoSettingsOpen, setIsVideoSettingsOpen] = useState(false);
-  const [videoSettings, setVideoSettings] = useState<VideoSettings>({
+  // ===== 全域影片進階設定（預設值） =====
+  const [videoSettings, setVideoSettings] = useState<VideoSettingsState>({
     codec: "h264",
     resolution: "1080p",
     aspectRatio: "16:9",
     frameRate: 30,
   });
 
-  // 影片工具：mp4 / webm / gif / mp3 這類（用 baseOutput 判斷）
-  const isVideoTool =
-    baseOutput === "mp4" ||
-    baseOutput === "webm" ||
-    baseOutput === "gif" ||
-    baseOutput === "mp3";
+  const [showVideoSettings, setShowVideoSettings] = useState(false);
 
-  const addItem = (file: File): UploadItem => {
+  // 根據 inputFormat 粗略判斷是不是影片工具
+  const isVideoTool = (() => {
+    if (!inputFormat) return false;
+    const f = inputFormat.toUpperCase();
+    return ["MP4", "MOV", "M4V", "WEBM"].includes(f);
+  })();
+
+  const addItem = (file: File): UploadItemWithVideo => {
     const id = crypto.randomUUID();
+    const isVideo =
+      file.type.startsWith("video/") ||
+      (isVideoTool && !file.type); // 沒有 type 時，用工具判斷
 
-    const item: UploadItem = {
+    const item: UploadItemWithVideo = {
       id,
       file,
       name: file.name,
       size: file.size,
       type: file.type || "application/octet-stream",
-      isVideo: file.type.startsWith("video/"),
+      isVideo,
       status: "waiting" as UploadStatus,
       progress: 0,
-      // 每個檔案記住當下的有效輸出格式
-      outputFormat: effectiveOutput,
+      outputFormat: selectedOutput,
+      // ✅ 如果是影片，附上當下的進階設定
+      videoSettings: isVideo ? videoSettings : undefined,
     };
 
     setItems((prev) => [...prev, item]);
     return item;
   };
 
-  const updateItem = (id: string, patch: Partial<UploadItem> | any) => {
+  const updateItem = (id: string, patch: Partial<UploadItemWithVideo> | any) => {
     setItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, ...patch } : it))
     );
@@ -103,7 +110,7 @@ export default function FileUpload({
     setGlobalError(msg);
   };
 
-  const runJobPipeline = async (item: UploadItem) => {
+  const runJobPipeline = async (item: UploadItemWithVideo) => {
     try {
       const ext = item.name.split(".").pop()?.toLowerCase();
       if (ext === "avif") {
@@ -113,20 +120,26 @@ export default function FileUpload({
 
       updateItem(item.id, { status: "uploading", progress: 0 });
 
-      // 1. 取得上傳 URL
+      // 1. S3 上傳 URL
       const uploadInfo = await getUploadUrl(item.file);
 
       // 2. 上傳到 S3
       await uploadFileToS3(item.file, uploadInfo.upload_url);
       updateItem(item.id, { status: "processing", progress: 10 });
 
-      // 3. 呼叫轉檔 API，使用檔案自己的 outputFormat 或目前有效輸出格式
+      // 3. 呼叫轉檔 API
       const targetFormat = (
-        item.outputFormat || effectiveOutput || "png"
+        item.outputFormat || selectedOutput || "png"
       ).toLowerCase();
 
-      // ⚠️ 目前 videoSettings 還沒送到後端，先保留在前端
-      const { job_id } = await startConversion(uploadInfo.key, targetFormat);
+      // ✅ 只有影片才會帶 videoSettings（圖片 tools 不受影響）
+      const videoPayload = item.isVideo ? item.videoSettings : undefined;
+
+      const { job_id } = await startConversion(
+        uploadInfo.key,
+        targetFormat,
+        videoPayload
+      );
 
       updateItem(item.id, { jobId: job_id, status: "processing" });
 
@@ -195,7 +208,7 @@ export default function FileUpload({
         void runJobPipeline(item);
       }
     },
-    [effectiveOutput, lang]
+    [selectedOutput, videoSettings, lang] // ✅ 語系 / 影片設定變動，新檔案會吃到最新設定
   );
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
@@ -230,11 +243,12 @@ export default function FileUpload({
     }
   };
 
-  const displayOutput = (effectiveOutput || "png").toUpperCase();
+  const displayOutput = (selectedOutput || outputFormat || "png").toUpperCase();
 
+  // === UI ===
   return (
     <div className="w-full flex flex-col gap-4">
-      {/* Global error */}
+      {/* Global Error Banner */}
       {globalError && (
         <div className="w-full max-w-3xl mx-auto mb-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 flex items-start justify-between gap-3">
           <div className="flex gap-2">
@@ -251,8 +265,8 @@ export default function FileUpload({
         </div>
       )}
 
-      {/* 上方：輸出說明 +（圖片工具才有）下拉 +（影片工具）進階設定 */}
-      <div className="w-full max-w-3xl mx-auto flex items-center justify-between text-sm mb-1">
+      {/* 上方：輸出格式 + 影片進階設定按鈕 */}
+      <div className="w-full max-w-3xl mx-auto flex items-center justify-between text-sm mb-1 gap-3">
         <div className="text-gray-600">
           {inputFormat
             ? lang === "zh"
@@ -264,9 +278,9 @@ export default function FileUpload({
         </div>
 
         <div className="flex items-center gap-3">
-          {/* 只有圖片工具可以選擇輸出格式 */}
-          {isImageTool && (
-            <div className="flex items-center gap-2">
+          {/* 只有影像工具保留下拉，影片工具就可以視需要改成固定 */}
+          {!isVideoTool && (
+            <>
               <span className="text-gray-500">
                 {lang === "zh" ? "輸出格式" : "Output format"}
               </span>
@@ -275,30 +289,145 @@ export default function FileUpload({
                 value={selectedOutput}
                 onChange={(e) => setSelectedOutput(e.target.value)}
               >
-                {IMAGE_OUTPUT_OPTIONS.map((fmt) => (
+                {OUTPUT_OPTIONS.map((fmt) => (
                   <option key={fmt} value={fmt}>
                     {fmt.toUpperCase()}
                   </option>
                 ))}
               </select>
-            </div>
+            </>
           )}
 
-          {/* 影片工具：顯示進階影片設定按钮 */}
+          {/* 影片工具：顯示「影片進階設定」按鈕 */}
           {isVideoTool && (
             <button
               type="button"
-              onClick={() => setIsVideoSettingsOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs sm:text-[13px] text-slate-600 hover:bg-slate-50"
+              onClick={() => setShowVideoSettings(true)}
+              className="inline-flex items-center gap-1 rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
             >
-              🎬{" "}
-              {lang === "zh"
-                ? "影片進階設定"
-                : "Advanced video settings"}
+              🎬 {lang === "zh" ? "影片進階設定" : "Video settings"}
             </button>
           )}
         </div>
       </div>
+
+      {/* 影片進階設定 Modal（簡易版） */}
+      {showVideoSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-lg text-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold">
+                {lang === "zh" ? "影片進階設定" : "Advanced video settings"}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowVideoSettings(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Codec */}
+              <div className="flex items-center justify-between gap-3">
+                <span>{lang === "zh" ? "編碼格式" : "Codec"}</span>
+                <select
+                  className="border border-slate-300 rounded-lg px-2 py-1 text-xs"
+                  value={videoSettings.codec}
+                  onChange={(e) =>
+                    setVideoSettings((prev) => ({
+                      ...prev,
+                      codec: e.target.value as VideoSettingsState["codec"],
+                    }))
+                  }
+                >
+                  <option value="h264">H.264 (MP4)</option>
+                  <option value="h265">H.265 / HEVC</option>
+                  <option value="vp9">VP9 (WebM)</option>
+                  <option value="av1">AV1</option>
+                </select>
+              </div>
+
+              {/* Resolution */}
+              <div className="flex items-center justify-between gap-3">
+                <span>{lang === "zh" ? "解析度" : "Resolution"}</span>
+                <select
+                  className="border border-slate-300 rounded-lg px-2 py-1 text-xs"
+                  value={videoSettings.resolution}
+                  onChange={(e) =>
+                    setVideoSettings((prev) => ({
+                      ...prev,
+                      resolution:
+                        e.target.value as VideoSettingsState["resolution"],
+                    }))
+                  }
+                >
+                  <option value="2160p">4K (2160p)</option>
+                  <option value="1440p">2K (1440p)</option>
+                  <option value="1080p">Full HD (1080p)</option>
+                  <option value="720p">HD (720p)</option>
+                  <option value="480p">SD (480p)</option>
+                </select>
+              </div>
+
+              {/* Frame rate */}
+              <div className="flex items-center justify-between gap-3">
+                <span>{lang === "zh" ? "影格率 (fps)" : "Frame rate"}</span>
+                <select
+                  className="border border-slate-300 rounded-lg px-2 py-1 text-xs"
+                  value={videoSettings.frameRate}
+                  onChange={(e) =>
+                    setVideoSettings((prev) => ({
+                      ...prev,
+                      frameRate: Number(
+                        e.target.value
+                      ) as VideoSettingsState["frameRate"],
+                    }))
+                  }
+                >
+                  <option value={24}>24</option>
+                  <option value={30}>30</option>
+                  <option value={60}>60</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowVideoSettings(false)}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 hover:bg-slate-50"
+              >
+                {lang === "zh" ? "取消" : "Cancel"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // ✅ 把目前 queue 裡所有「尚未開始的影片 item」也同步更新設定
+                  setItems((prev) =>
+                    prev.map((it) =>
+                      (it as UploadItemWithVideo).isVideo &&
+                      (it.status === "waiting" ||
+                        it.status === "uploading" ||
+                        it.status === "processing")
+                        ? {
+                            ...(it as UploadItemWithVideo),
+                            videoSettings,
+                          }
+                        : it
+                    )
+                  );
+                  setShowVideoSettings(false);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
+              >
+                {lang === "zh" ? "儲存設定" : "Save settings"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Drop zone */}
       <div
@@ -370,7 +499,7 @@ export default function FileUpload({
                     <div className="text-xs text-gray-400">
                       {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
                       {item.status} · →{" "}
-                      {(item.outputFormat || effectiveOutput).toUpperCase()}
+                      {item.outputFormat?.toUpperCase()}
                     </div>
                     <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                       <div
@@ -408,17 +537,6 @@ export default function FileUpload({
           })}
         </ul>
       </div>
-
-      {/* 影片進階設定 Modal */}
-      <VideoSettingsModal
-        open={isVideoSettingsOpen}
-        value={videoSettings}
-        onClose={() => setIsVideoSettingsOpen(false)}
-        onSave={(next) => {
-          setVideoSettings(next);
-          setIsVideoSettingsOpen(false);
-        }}
-      />
     </div>
   );
 }

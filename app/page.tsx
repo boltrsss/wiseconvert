@@ -1,5 +1,5 @@
 // app/page.tsx
-'use client';
+"use client"; // ✅ 讓這頁可以用 hook
 
 import React from "react";
 import { AdSlot } from "@/components/AdSlot";
@@ -39,7 +39,6 @@ export default function HomePage() {
             <a href="#pricing" className="hover:text-blue-600">
               {t("navbar.pricing")}
             </a>
-            {/* ✅ 新增：All tools 連到工具列表頁 */}
             <a href="/tools" className="hover:text-blue-600">
               {t("navbar.all_tools")}
             </a>
@@ -56,6 +55,7 @@ export default function HomePage() {
               </button>
             </div>
 
+            {/* 多語系切換器 */}
             <LanguageSwitcher />
           </div>
         </div>
@@ -72,10 +72,10 @@ export default function HomePage() {
             {/* Title */}
             <div className="text-center mb-6 lg:mb-8">
               <h1 className="text-4xl sm:text-[42px] font-semibold text-slate-900">
-                File Converter
+                {t("hero.title")}
               </h1>
               <p className="mt-3 text-base sm:text-lg text-slate-500">
-                Easily convert files from one format to another, online.
+                {t("hero.subtitle")}
               </p>
             </div>
 
@@ -149,7 +149,7 @@ export default function HomePage() {
         >
           <div className="max-w-screen-2xl mx-auto px-6 lg:px-10">
             <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 mb-6">
-              Why choose WiseConvert?
+              {t("why.title")}
             </h2>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -158,10 +158,10 @@ export default function HomePage() {
                   ⚡
                 </div>
                 <h3 className="text-base font-semibold text-slate-900 mb-2">
-                  Fast cloud processing
+                  {t("why.fast_title")}
                 </h3>
                 <p className="text-sm text-slate-500">
-                  High-performance servers convert your files quickly.
+                  {t("why.fast_desc")}
                 </p>
               </div>
 
@@ -170,10 +170,10 @@ export default function HomePage() {
                   🔒
                 </div>
                 <h3 className="text-base font-semibold text-slate-900 mb-2">
-                  Privacy-first
+                  {t("why.privacy_title")}
                 </h3>
                 <p className="text-sm text-slate-500">
-                  Files are encrypted and auto-deleted after a short period.
+                  {t("why.privacy_desc")}
                 </p>
               </div>
 
@@ -182,10 +182,10 @@ export default function HomePage() {
                   🧰
                 </div>
                 <h3 className="text-base font-semibold text-slate-900 mb-2">
-                  All-in-one toolset
+                  {t("why.all_in_one_title")}
                 </h3>
                 <p className="text-sm text-slate-500">
-                  Convert images, videos, audio and documents in one place.
+                  {t("why.all_in_one_desc")}
                 </p>
               </div>
             </div>
@@ -199,30 +199,30 @@ export default function HomePage() {
         >
           <div className="max-w-screen-2xl mx-auto px-6 lg:px-10">
             <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 mb-8">
-              How it works
+              {t("how_it_works.title")}
             </h2>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 {
                   step: 1,
-                  title: "Upload your files",
-                  desc: "Browse or drag & drop.",
+                  title: t("how_it_works.step1_title"),
+                  desc: t("how_it_works.step1_desc"),
                 },
                 {
                   step: 2,
-                  title: "Choose output format",
-                  desc: "Pick JPG, MP4, PDF, MP3 and more.",
+                  title: t("how_it_works.step2_title"),
+                  desc: t("how_it_works.step2_desc"),
                 },
                 {
                   step: 3,
-                  title: "Convert in the cloud",
-                  desc: "Fast servers do the heavy work.",
+                  title: t("how_it_works.step3_title"),
+                  desc: t("how_it_works.step3_desc"),
                 },
                 {
                   step: 4,
-                  title: "Download instantly",
-                  desc: "Your files will be ready in seconds.",
+                  title: t("how_it_works.step4_title"),
+                  desc: t("how_it_works.step4_desc"),
                 },
               ].map((item) => (
                 <div
@@ -248,37 +248,43 @@ export default function HomePage() {
         <section id="pricing" className="py-12 lg:py-14 bg-white">
           <div className="max-w-screen-2xl mx-auto px-6 lg:px-10">
             <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900 mb-8">
-              Start free. Upgrade later.
+              {t("pricing.title")}
             </h2>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Free */}
               <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200">
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                  Free
+                  {t("pricing.free_title")}
                 </h3>
                 <p className="text-sm text-slate-500 mb-4">
-                  Ideal for most users.
+                  {t("pricing.free_desc")}
                 </p>
-                <p className="text-3xl font-bold">$0</p>
+                <p className="text-3xl font-bold">
+                  {t("pricing.free_price")}
+                </p>
                 <ul className="mt-4 space-y-2 text-sm text-slate-600">
-                  <li>✓ 1GB max file size</li>
-                  <li>✓ Standard conversion speed</li>
-                  <li>✓ Basic tools</li>
+                  <li>{t("pricing.free_benefit1")}</li>
+                  <li>{t("pricing.free_benefit2")}</li>
+                  <li>{t("pricing.free_benefit3")}</li>
                 </ul>
               </div>
 
               {/* Pro */}
               <div className="p-6 rounded-2xl bg-slate-900 text-slate-100">
-                <h3 className="text-lg font-semibold mb-2">Pro</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  {t("pricing.pro_title")}
+                </h3>
                 <p className="text-sm text-slate-300 mb-4">
-                  Coming soon — for power users.
+                  {t("pricing.pro_desc")}
                 </p>
-                <p className="text-3xl font-bold">$19</p>
+                <p className="text-3xl font-bold">
+                  {t("pricing.pro_price")}
+                </p>
                 <ul className="mt-4 space-y-2 text-sm text-slate-200">
-                  <li>✓ Faster conversions</li>
-                  <li>✓ Higher file limits</li>
-                  <li>✓ Priority support</li>
+                  <li>{t("pricing.pro_benefit1")}</li>
+                  <li>{t("pricing.pro_benefit2")}</li>
+                  <li>{t("pricing.pro_benefit3")}</li>
                 </ul>
               </div>
             </div>
@@ -309,13 +315,13 @@ export default function HomePage() {
 
           <div className="flex items-center gap-5">
             <a className="hover:text-blue-600" href="#">
-              Privacy
+              {t("footer.privacy")}
             </a>
             <a className="hover:text-blue-600" href="#">
-              Terms
+              {t("footer.terms")}
             </a>
             <a className="hover:text-blue-600" href="#">
-              Contact
+              {t("footer.contact")}
             </a>
           </div>
         </div>

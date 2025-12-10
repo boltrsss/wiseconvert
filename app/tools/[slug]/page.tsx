@@ -6,7 +6,6 @@ import { notFound } from "next/navigation";
 import FileUpload from "@/components/FileUpload";
 import { AdSlot } from "@/components/AdSlot";
 import { getToolBySlug } from "@/lib/toolsConfig";
-import { useLang } from "@/context/LanguageContext";
 
 export const runtime = "edge";
 
@@ -15,23 +14,20 @@ type ToolPageProps = {
 };
 
 export default function ToolPage({ params }: ToolPageProps) {
-  const { lang } = useLang();
   const tool = getToolBySlug(params.slug);
 
   if (!tool) {
     return notFound();
   }
 
-  const title = tool.title[lang];
-  const description = tool.shortDescription[lang];
+  const title = tool.title.en;
+  const description = tool.shortDescription.en;
 
   const primaryOutput = tool.outputFormats[0]?.toUpperCase() ?? "PNG";
   const primaryInput = tool.inputFormats[0]?.toUpperCase() ?? undefined;
 
-  // ⬇️ SEO 內容（從 toolsConfig 可選擇帶入）
-  const longDesc = tool.longDescription?.[lang] ?? [];
-  const useCases = tool.useCases?.[lang] ?? [];
-  const faq = tool.faq?.[lang] ?? [];
+  const inputLabel = tool.inputFormats.join(", ").toUpperCase();
+  const outputLabel = tool.outputFormats.join(", ").toUpperCase();
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
@@ -52,7 +48,7 @@ export default function ToolPage({ params }: ToolPageProps) {
               className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
             >
               <span>←</span>
-              <span>{lang === "zh" ? "回首頁" : "Back to Home"}</span>
+              <span>Back to Home</span>
             </Link>
             <span className="hidden sm:inline">
               {tool.category.toUpperCase()} TOOL
@@ -86,11 +82,11 @@ export default function ToolPage({ params }: ToolPageProps) {
             <div className="mb-6 max-w-3xl">
               <div className="text-[11px] text-slate-400 mb-2">
                 <Link href="/" className="hover:underline">
-                  {lang === "zh" ? "首頁" : "Home"}
+                  Home
                 </Link>
                 <span className="mx-1">/</span>
                 <Link href="/tools" className="hover:underline">
-                  {lang === "zh" ? "工具" : "Tools"}
+                  Tools
                 </Link>
                 <span className="mx-1">/</span>
                 <span>{title}</span>
@@ -102,14 +98,11 @@ export default function ToolPage({ params }: ToolPageProps) {
                 {description}
               </p>
               <p className="text-xs text-slate-400">
-                {lang === "zh" ? "輸入格式" : "Supported input"}:{" "}
-                {tool.inputFormats.join(", ").toUpperCase()} •{" "}
-                {lang === "zh" ? "輸出" : "Output"}:{" "}
-                {tool.outputFormats.join(", ").toUpperCase()}
+                Supported input: {inputLabel} • Output: {outputLabel}
               </p>
             </div>
 
-            {/* 主體：左工具 + 右側欄（保持原本 layout） */}
+            {/* 主體：左工具 + 右側欄（廣告優先，說明在下方） */}
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-6 items-start">
               {/* 左側：FileUpload + 中間橫幅 */}
               <div className="space-y-4">
@@ -139,7 +132,7 @@ export default function ToolPage({ params }: ToolPageProps) {
                 </div>
               </div>
 
-              {/* 右側：側欄廣告 + 說明（保持原本） */}
+              {/* 右側：側欄廣告 + 說明（說明在最下方） */}
               <aside className="space-y-4">
                 {/* 兩個 300×250 廣告位 */}
                 <div className="hidden lg:block">
@@ -160,106 +153,102 @@ export default function ToolPage({ params }: ToolPageProps) {
                 {/* 說明區塊放在側欄最下方 */}
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
                   <h2 className="text-base font-semibold text-slate-900 mb-2">
-                    {lang === "zh"
-                      ? "這個轉檔工具怎麼使用？"
-                      : "How this converter works"}
+                    How this converter works
                   </h2>
                   <ol className="list-decimal list-inside space-y-1 text-xs sm:text-sm">
+                    <li>Upload your file using drag & drop or click.</li>
                     <li>
-                      {lang === "zh"
-                        ? "透過拖拉或點擊，上傳你的檔案。"
-                        : "Upload your file using drag & drop or click."}
+                      WiseConvert converts it in the cloud to {primaryOutput}.
                     </li>
-                    <li>
-                      {lang === "zh"
-                        ? `WiseConvert 會在雲端將檔案轉成 ${primaryOutput}。`
-                        : `WiseConvert converts it in the cloud to ${primaryOutput}.`}
-                    </li>
-                    <li>
-                      {lang === "zh"
-                        ? "幾秒鐘內即可下載完成的檔案。"
-                        : "Download your converted file instantly."}
-                    </li>
+                    <li>Download your converted file instantly.</li>
                   </ol>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
                   <h3 className="text-sm font-semibold text-slate-900 mb-1">
-                    {lang === "zh" ? "為什麼選 WiseConvert？" : "Why use WiseConvert?"}
+                    Why use WiseConvert?
                   </h3>
                   <ul className="list-disc list-inside space-y-1 text-xs sm:text-sm">
+                    <li>No software install, all in browser.</li>
+                    <li>Fast cloud processing and secure transfer.</li>
                     <li>
-                      {lang === "zh"
-                        ? "免安裝軟體，全部在瀏覽器中完成。"
-                        : "No software install, all in browser."}
-                    </li>
-                    <li>
-                      {lang === "zh"
-                        ? "雲端高速處理，傳輸加密更安全。"
-                        : "Fast cloud processing and secure transfer."}
-                    </li>
-                    <li>
-                      {lang === "zh"
-                        ? "更多圖片、影片、音訊與 PDF 工具即將上線。"
-                        : "More tools coming soon: images, video, audio & PDF."}
+                      More tools coming soon: images, video, audio &amp; PDF.
                     </li>
                   </ul>
                 </div>
               </aside>
             </div>
 
-            {/* ⬇️ 新增：SEO 內容區塊（放在 grid 下面、底部廣告上面） */}
-            {(longDesc.length > 0 ||
-              useCases.length > 0 ||
-              faq.length > 0) && (
-              <section className="mt-10 max-w-3xl text-sm text-slate-600 space-y-6">
-                {/* 長描述段落 */}
-                {longDesc.length > 0 && (
-                  <div className="space-y-3">
-                    {longDesc.map((para, idx) => (
-                      <p key={idx} className="leading-relaxed">
-                        {para}
-                      </p>
-                    ))}
-                  </div>
-                )}
+            {/* ✅ 新增：SEO 內容區塊（保留你原本 layout，在下方補文案） */}
+            <section className="mt-10 max-w-3xl text-sm text-slate-600 space-y-6">
+              <div className="space-y-3">
+                <p className="leading-relaxed">
+                  WiseConvert’s {title} lets you quickly convert {inputLabel}{" "}
+                  files into high-quality {outputLabel} directly in your browser.
+                  No software installation, no registration needed.
+                </p>
+                <p className="leading-relaxed">
+                  Upload your files, choose the output format, and download your
+                  converted files in seconds. Everything is processed in the
+                  cloud so it works on Windows, Mac, Linux, phones and tablets.
+                </p>
+              </div>
 
-                {/* 使用情境 */}
-                {useCases.length > 0 && (
+              <div>
+                <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-2">
+                  When should you use this converter?
+                </h2>
+                <ul className="list-disc list-inside space-y-1.5">
+                  <li>Prepare files for web, UI design or documents.</li>
+                  <li>Make your files compatible with more apps and devices.</li>
+                  <li>Reduce file size while keeping good visual or audio quality.</li>
+                  <li>Share files more easily via email, chat or cloud storage.</li>
+                </ul>
+              </div>
+
+              <div className="border-t border-slate-200 pt-4">
+                <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-3">
+                  FAQ
+                </h2>
+
+                <div className="space-y-4">
                   <div>
-                    <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-2">
-                      {lang === "zh"
-                        ? "什麼時候適合使用這個轉檔工具？"
-                        : "When should you use this converter?"}
-                    </h2>
-                    <ul className="list-disc list-inside space-y-1.5">
-                      {useCases.map((item, idx) => (
-                        <li key={idx}>{item}</li>
-                      ))}
-                    </ul>
+                    <h3 className="text-sm font-semibold text-slate-900 mb-1">
+                      Will converting {primaryInput} to {primaryOutput} improve
+                      quality?
+                    </h3>
+                    <p className="leading-relaxed">
+                      Converting will not magically add new details, but it can
+                      preserve existing quality better and avoid extra
+                      compression artifacts compared to some other formats.
+                    </p>
                   </div>
-                )}
 
-                {/* FAQ */}
-                {faq.length > 0 && (
-                  <div className="border-t border-slate-200 pt-4">
-                    <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-3">
-                      FAQ
-                    </h2>
-                    <div className="space-y-4">
-                      {faq.map((item, idx) => (
-                        <div key={idx}>
-                          <h3 className="text-sm font-semibold text-slate-900 mb-1">
-                            {item.q}
-                          </h3>
-                          <p className="leading-relaxed">{item.a}</p>
-                        </div>
-                      ))}
-                    </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 mb-1">
+                      Are my files safe?
+                    </h3>
+                    <p className="leading-relaxed">
+                      Files are transferred over HTTPS and processed on secure
+                      servers. They are automatically removed after a short
+                      period so your data doesn&apos;t stay online longer than
+                      needed.
+                    </p>
                   </div>
-                )}
-              </section>
-            )}
+
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 mb-1">
+                      Do I need to install anything?
+                    </h3>
+                    <p className="leading-relaxed">
+                      No. WiseConvert runs entirely in your browser, so you can
+                      convert files on any device without installing extra
+                      software.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
 
             {/* 底部：全寬 Banner 廣告 */}
             <div className="mt-8">

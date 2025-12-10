@@ -11,11 +11,12 @@ interface SettingsModalProps {
   onSave: (settings: VideoSettings) => void;
 }
 
+// ✅ 預設設定：frameRate 改成 number
 const defaultSettings: VideoSettings = {
   codec: "h264",
   resolution: "1080p",
-  aspectRatio: "16:9",
-  frameRate: "30",
+  aspectRatio: "16:9", // 來自 index signature，OK
+  frameRate: 30,       // ✅ number 而不是 "30"
 };
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -38,10 +39,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   if (!isOpen) return null;
 
+  // ✅ 支援字串欄位 + 數字欄位（frameRate / bitrate / fps 等）
   const handleChange =
-    (field: keyof VideoSettings) =>
+    (field: keyof VideoSettings | "aspectRatio" | "frameRate") =>
     (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-      setSettings((prev) => ({ ...prev, [field]: e.target.value }));
+      const raw = e.target.value;
+
+      let value: any = raw;
+      if (
+        field === "frameRate" ||
+        field === "bitrate" ||
+        field === "fps" ||
+        field === "audioBitrate" ||
+        field === "audioChannels"
+      ) {
+        value = raw === "" ? undefined : Number(raw);
+      }
+
+      setSettings((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
     };
 
   const handleSave = () => {
@@ -157,7 +175,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               {t("videoSettings.frameRate.label")}
             </label>
             <select
-              value={settings.frameRate}
+              value={settings.frameRate ?? 30}
               onChange={handleChange("frameRate")}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >

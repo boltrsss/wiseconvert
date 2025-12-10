@@ -1,44 +1,31 @@
-// app/tools/[slug]/ToolPageClient.tsx
-"use client";
+// app/tools/[slug]/page.tsx
 
 import React from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import FileUpload from "@/components/FileUpload";
 import { AdSlot } from "@/components/AdSlot";
-import { useLang } from "@/context/LanguageContext";
-import type { ToolDefinition } from "@/lib/toolsConfig";
+import { getToolBySlug } from "@/lib/toolsConfig";
 
-type Props = {
-  tool: ToolDefinition;
-};
+export const runtime = "edge";
 
-export default function ToolPageClient({ tool }: Props) {
-  const { lang } = useLang();
-  const isZh = lang === "zh";
+export default function ToolPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const tool = getToolBySlug(params.slug);
 
-  const title = tool.title[lang];
-  const description = tool.shortDescription[lang];
+  if (!tool) {
+    return notFound();
+  }
+
+  const title = tool.title.en;
+  const description = tool.shortDescription.en;
+  const seoDescription = tool.seoDescription.en;
 
   const primaryOutput = tool.outputFormats[0]?.toUpperCase() ?? "PNG";
-  const primaryInput = tool.inputFormats[0]?.toUpperCase() ?? undefined;
-
-  const inputLabel = tool.inputFormats.join(", ").toUpperCase();
-  const outputLabel = tool.outputFormats.join(", ").toUpperCase();
-
-  const homeLabel = isZh ? "首頁" : "Home";
-  const toolsLabel = isZh ? "工具" : "Tools";
-  const backHomeLabel = isZh ? "回首頁" : "Back to Home";
-
-  const howTitle = isZh ? "這個轉檔工具怎麼運作？" : "How this converter works";
-  const whyTitle = isZh ? "為什麼使用 WiseConvert？" : "Why use WiseConvert?";
-
-  const whenUseTitle = isZh
-    ? "什麼時候適合使用這個轉檔工具？"
-    : "When should you use this converter?";
-
-  const faqTitle = isZh ? "常見問題 FAQ" : "FAQ";
-  const safetyTitle = isZh ? "我的檔案安全嗎？" : "Are my files safe?";
-  const installTitle = isZh ? "需要安裝軟體嗎？" : "Do I need to install anything?";
+  const primaryInput = tool.inputFormats[0]?.toUpperCase() ?? "JPG";
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
@@ -59,7 +46,7 @@ export default function ToolPageClient({ tool }: Props) {
               className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
             >
               <span>←</span>
-              <span>{backHomeLabel}</span>
+              <span>Back to Home</span>
             </Link>
             <span className="hidden sm:inline">
               {tool.category.toUpperCase()} TOOL
@@ -93,11 +80,11 @@ export default function ToolPageClient({ tool }: Props) {
             <div className="mb-6 max-w-3xl">
               <div className="text-[11px] text-slate-400 mb-2">
                 <Link href="/" className="hover:underline">
-                  {homeLabel}
+                  Home
                 </Link>
                 <span className="mx-1">/</span>
                 <Link href="/tools" className="hover:underline">
-                  {toolsLabel}
+                  Tools
                 </Link>
                 <span className="mx-1">/</span>
                 <span>{title}</span>
@@ -109,8 +96,8 @@ export default function ToolPageClient({ tool }: Props) {
                 {description}
               </p>
               <p className="text-xs text-slate-400">
-                {isZh ? "支援輸入格式" : "Supported input"}: {inputLabel} •{" "}
-                {isZh ? "輸出格式" : "Output"}: {outputLabel}
+                Supported input: {tool.inputFormats.join(", ").toUpperCase()} •{" "}
+                Output: {tool.outputFormats.join(", ").toUpperCase()}
               </p>
             </div>
 
@@ -165,187 +152,91 @@ export default function ToolPageClient({ tool }: Props) {
                 {/* 說明區塊放在側欄最下方 */}
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
                   <h2 className="text-base font-semibold text-slate-900 mb-2">
-                    {howTitle}
+                    How this converter works
                   </h2>
                   <ol className="list-decimal list-inside space-y-1 text-xs sm:text-sm">
-                    {isZh ? (
-                      <>
-                        <li>點選或拖拉上傳檔案到上方的轉檔區域。</li>
-                        <li>
-                          WiseConvert 在雲端自動將檔案轉成 {primaryOutput} 格式。
-                        </li>
-                        <li>轉檔完成後，立即下載處理好的檔案。</li>
-                      </>
-                    ) : (
-                      <>
-                        <li>Upload your file using drag &amp; drop or click.</li>
-                        <li>
-                          WiseConvert converts it in the cloud to {primaryOutput}.
-                        </li>
-                        <li>Download your converted file instantly.</li>
-                      </>
-                    )}
+                    <li>Upload your file using drag &amp; drop or click.</li>
+                    <li>
+                      WiseConvert converts it in the cloud to {primaryOutput}.
+                    </li>
+                    <li>Download your converted file instantly.</li>
                   </ol>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
                   <h3 className="text-sm font-semibold text-slate-900 mb-1">
-                    {whyTitle}
+                    Why use WiseConvert?
                   </h3>
                   <ul className="list-disc list-inside space-y-1 text-xs sm:text-sm">
-                    {isZh ? (
-                      <>
-                        <li>全部在瀏覽器完成，免安裝任何程式。</li>
-                        <li>雲端伺服器處理轉檔，速度快、穩定。</li>
-                        <li>陸續增加更多圖片、影片、音訊與 PDF 工具。</li>
-                      </>
-                    ) : (
-                      <>
-                        <li>No software install, all in browser.</li>
-                        <li>Fast cloud processing and secure transfer.</li>
-                        <li>
-                          More tools coming soon: images, video, audio &amp; PDF.
-                        </li>
-                      </>
-                    )}
+                    <li>No software install, all in browser.</li>
+                    <li>Fast cloud processing and secure transfer.</li>
+                    <li>
+                      More tools coming soon: images, video, audio &amp; PDF.
+                    </li>
                   </ul>
                 </div>
               </aside>
             </div>
 
-            {/* ✅ SEO 內容區塊（依語系切換文案） */}
-            <section className="mt-10 max-w-3xl text-sm text-slate-600 space-y-6">
-              <div className="space-y-3">
-                <p className="leading-relaxed">
-                  {isZh ? (
-                    <>
-                      WiseConvert 的 {title} 可以在瀏覽器中，快速把 {inputLabel} 檔案轉成{" "}
-                      {outputLabel}。不需要安裝任何軟體，也不用註冊帳號。
-                    </>
-                  ) : (
-                    <>
-                      WiseConvert&apos;s {title} lets you quickly convert{" "}
-                      {inputLabel} files into high-quality {outputLabel} directly
-                      in your browser. No software installation, no registration.
-                    </>
-                  )}
-                </p>
-                <p className="leading-relaxed">
-                  {isZh ? (
-                    <>
-                      只要上傳檔案、選擇輸出格式，幾秒鐘內就能下載完成的結果。所有轉檔都在雲端處理，
-                      不論你使用 Windows、Mac、Linux 或手機、平板都能輕鬆使用。
-                    </>
-                  ) : (
-                    <>
-                      Upload your files, choose the output format, and download
-                      your converted files in seconds. Everything runs in the
-                      cloud, so it works on Windows, Mac, Linux, phones and
-                      tablets.
-                    </>
-                  )}
-                </p>
-              </div>
+            {/* 下方 SEO 內容區（保留原 layout，只是往下補文案） */}
+            <div className="mt-10 lg:mt-12 max-w-3xl text-sm sm:text-base text-slate-600">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 mb-3">
+                When should you use a {title}?
+              </h2>
+              <p className="mb-2">
+                {seoDescription}
+              </p>
+              <ul className="list-disc list-inside space-y-1 mb-6">
+                <li>Keep transparent backgrounds for logos and UI icons.</li>
+                <li>Prepare images for web design or app assets.</li>
+                <li>Reduce compression artifacts from old {primaryInput} files.</li>
+                <li>
+                  Convert screenshots to lossless {primaryOutput} for better
+                  readability.
+                </li>
+              </ul>
 
-              <div>
-                <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-2">
-                  {whenUseTitle}
-                </h2>
-                <ul className="list-disc list-inside space-y-1.5">
-                  {isZh ? (
-                    <>
-                      <li>為網頁、UI 設計或簡報準備適合的檔案格式。</li>
-                      <li>讓檔案在更多裝置與軟體中保持相容。</li>
-                      <li>在維持畫質或音質的情況下降低檔案大小。</li>
-                      <li>更方便地透過 Email、通訊軟體或雲端分享檔案。</li>
-                    </>
-                  ) : (
-                    <>
-                      <li>Prepare files for web, UI design or documents.</li>
-                      <li>Make your files compatible with more apps and devices.</li>
-                      <li>
-                        Reduce file size while keeping good visual or audio
-                        quality.
-                      </li>
-                      <li>
-                        Share files more easily via email, chat or cloud storage.
-                      </li>
-                    </>
-                  )}
-                </ul>
-              </div>
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 mb-3">
+                FAQ
+              </h2>
 
-              <div className="border-t border-slate-200 pt-4">
-                <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-3">
-                  {faqTitle}
-                </h2>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
+                    Will converting {primaryInput} to {primaryOutput} improve
+                    image quality?
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    Converting to {primaryOutput} won&apos;t magically add new
+                    details, but it helps preserve existing quality better and
+                    avoids extra compression compared to re-saving as{" "}
+                    {primaryInput}.
+                  </p>
+                </div>
 
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900 mb-1">
-                      {isZh
-                        ? `把 ${primaryInput} 轉成 ${primaryOutput} 會提升畫質嗎？`
-                        : `Will converting ${primaryInput} to ${primaryOutput} improve quality?`}
-                    </h3>
-                    <p className="leading-relaxed">
-                      {isZh ? (
-                        <>
-                          轉檔不會憑空產生更多細節，但可以避免重複壓縮造成的畫質損失，
-                          在某些情況下能保留比較好的品質。
-                        </>
-                      ) : (
-                        <>
-                          Converting will not magically add new details, but it
-                          can avoid extra compression artifacts and help preserve
-                          the existing quality.
-                        </>
-                      )}
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
+                    Is my file safe when I upload it?
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    Files are processed securely in the cloud and are kept only
+                    for a short time for conversion. We recommend downloading
+                    your result and deleting any copies you no longer need.
+                  </p>
+                </div>
 
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900 mb-1">
-                      {safetyTitle}
-                    </h3>
-                    <p className="leading-relaxed">
-                      {isZh ? (
-                        <>
-                          所有檔案都透過 HTTPS 傳輸並在安全的伺服器上處理，完成轉檔後會在短時間內自動刪除，
-                          你的檔案不會長期留在線上。
-                        </>
-                      ) : (
-                        <>
-                          Files are transferred over HTTPS and processed on secure
-                          servers. They are automatically removed after a short
-                          period so your data doesn&apos;t stay online longer than
-                          needed.
-                        </>
-                      )}
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900 mb-1">
-                      {installTitle}
-                    </h3>
-                    <p className="leading-relaxed">
-                      {isZh ? (
-                        <>
-                          不需要。WiseConvert 完全在瀏覽器中執行，
-                          任何裝置只要有網頁就能使用，不必另外安裝程式。
-                        </>
-                      ) : (
-                        <>
-                          No. WiseConvert runs entirely in your browser, so you
-                          can convert files on any device without installing extra
-                          software.
-                        </>
-                      )}
-                    </p>
-                  </div>
+                <div>
+                  <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
+                    Do I need to install any software?
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    No installation is required. Everything runs in your
+                    browser, so you can use this converter from any device with
+                    an internet connection.
+                  </p>
                 </div>
               </div>
-            </section>
+            </div>
 
             {/* 底部：全寬 Banner 廣告 */}
             <div className="mt-8">

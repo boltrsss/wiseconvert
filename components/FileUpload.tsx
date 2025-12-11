@@ -45,8 +45,10 @@ export default function FileUpload({
   const [globalError, setGlobalError] = useState<string | null>(null);
 
   const { lang } = useLang();
-
   const getErrorText = (key: ErrorMessageKey) => errorMessages[key][lang];
+
+  // 追蹤使用者在前端「取消」的檔案（只停止 polling，不殺後端 job）
+  const cancelledJobsRef = useRef<Set<string>>(new Set());
 
   // 全域輸出格式選單（預設用 props）
   const [selectedOutput, setSelectedOutput] = useState(
@@ -83,7 +85,7 @@ export default function FileUpload({
       size: file.size,
       type: file.type || "application/octet-stream",
       isVideo,
-      status: "waiting" as UploadStatus,
+      status: "idle" as UploadStatus, // ✅ 取代原本的 "waiting"
       progress: 0,
       outputFormat: selectedOutput,
       // ✅ 如果是影片，附上當下的進階設定
@@ -145,6 +147,11 @@ export default function FileUpload({
 
       // 4. Polling 狀態
       const poll = async (): Promise<void> => {
+        // 🔹 如果使用者在前端按了取消，就不要再繼續 poll
+        if (cancelledJobsRef.current.has(item.id)) {
+          return;
+        }
+
         const res: StatusResponse = await getJobStatus(job_id);
 
         if (res.status === "completed") {
@@ -404,11 +411,11 @@ export default function FileUpload({
               <button
                 type="button"
                 onClick={() => {
-                  // ✅ 把目前 queue 裡所有「尚未開始的影片 item」也同步更新設定
+                  // ✅ 把目前 queue 裡所有進行中的影片 item 也同步更新設定
                   setItems((prev) =>
                     prev.map((it) =>
                       (it as UploadItemWithVideo).isVideo &&
-                      (it.status === "waiting" ||
+                      (it.status === "idle" ||
                         it.status === "uploading" ||
                         it.status === "processing")
                         ? {
@@ -488,6 +495,9 @@ export default function FileUpload({
             const anyItem = item as any;
             const downloadUrl = anyItem.downloadUrl as string | undefined;
 
+            const isRunning =
+              item.status === "uploading" || item.status === "processing";
+
             return (
               <li
                 key={item.id}
@@ -498,7 +508,7 @@ export default function FileUpload({
                     <div className="font-medium truncate">{item.name}</div>
                     <div className="text-xs text-gray-400">
                       {(item.size / (1024 * 1024)).toFixed(2)} MB ·{" "}
-                      {item.status} · →{" "}
+                      {Math.round(item.progress ?? 0)}% · →{" "}
                       {item.outputFormat?.toUpperCase()}
                     </div>
                     <div className="mt-1 h-2 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -515,16 +525,40 @@ export default function FileUpload({
                     </div>
                   </div>
 
-                  {item.status === "done" && downloadUrl && (
-                    <a
-                      href={downloadUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                      {lang === "zh" ? "下載" : "Download"}
-                    </a>
-                  )}
+                  <div className="shrink-0 flex items-center gap-2">
+                    {/* Download 按鈕 */}
+                    {item.status === "done" && downloadUrl && (
+                      <a
+                        href={downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        {lang === "zh" ? "下載" : "Download"}
+                      </a>
+                    )}
+
+                    {/* Cancel 按鈕：上傳或處理中才顯示 */}
+                    {isRunning && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          cancelledJobsRef.current.add(item.id);
+                          updateItem(item.id, {
+                            status: "error",
+                            errorMessage:
+                              lang === "zh"
+                                ? "已取消此檔案的轉檔。"
+                                : "Conversion cancelled by user.",
+                            progress: 100,
+                          });
+                        }}
+                        className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 text-gray-600 hover:bg-gray-50"
+                      >
+                        {lang === "zh" ? "取消" : "Cancel"}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {item.errorMessage && (

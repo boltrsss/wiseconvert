@@ -63,6 +63,11 @@ export default function FileUpload({
     frameRate: 30,
   });
 
+  // ✅ 使用者是否「真的」儲存過自訂影片設定
+  //   false：MP4→MP4 不會帶 settings，同格式就直接 copy
+  //   true：影片轉檔會帶 settings，MP4→MP4 會 re-encode
+  const [hasCustomVideoSettings, setHasCustomVideoSettings] = useState(false);
+
   const [showVideoSettings, setShowVideoSettings] = useState(false);
 
   // 根據 inputFormat 粗略判斷是不是影片工具
@@ -85,11 +90,12 @@ export default function FileUpload({
       size: file.size,
       type: file.type || "application/octet-stream",
       isVideo,
-      status: "idle" as UploadStatus, // ✅ 取代原本的 "waiting"
+      status: "idle" as UploadStatus, // 取代原本的 "waiting"
       progress: 0,
       outputFormat: selectedOutput,
-      // ✅ 如果是影片，附上當下的進階設定
-      videoSettings: isVideo ? videoSettings : undefined,
+      // ✅ 只有「影片 + 有自訂設定」才帶 settings
+      //    => 預設 MP4→MP4 只是 copy，不會被重壓縮
+      videoSettings: isVideo && hasCustomVideoSettings ? videoSettings : undefined,
     };
 
     setItems((prev) => [...prev, item]);
@@ -134,7 +140,7 @@ export default function FileUpload({
         item.outputFormat || selectedOutput || "png"
       ).toLowerCase();
 
-      // ✅ 只有影片才會帶 videoSettings（圖片 tools 不受影響）
+      // ✅ 只有影片才會帶 videoSettings
       const videoPayload = item.isVideo ? item.videoSettings : undefined;
 
       const { job_id } = await startConversion(
@@ -147,7 +153,7 @@ export default function FileUpload({
 
       // 4. Polling 狀態
       const poll = async (): Promise<void> => {
-        // 🔹 如果使用者在前端按了取消，就不要再繼續 poll
+        // 若前端已取消，就停止 polling
         if (cancelledJobsRef.current.has(item.id)) {
           return;
         }
@@ -215,7 +221,7 @@ export default function FileUpload({
         void runJobPipeline(item);
       }
     },
-    [selectedOutput, videoSettings, lang] // ✅ 語系 / 影片設定變動，新檔案會吃到最新設定
+    [selectedOutput, videoSettings, hasCustomVideoSettings, lang]
   );
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
@@ -411,20 +417,8 @@ export default function FileUpload({
               <button
                 type="button"
                 onClick={() => {
-                  // ✅ 把目前 queue 裡所有進行中的影片 item 也同步更新設定
-                  setItems((prev) =>
-                    prev.map((it) =>
-                      (it as UploadItemWithVideo).isVideo &&
-                      (it.status === "idle" ||
-                        it.status === "uploading" ||
-                        it.status === "processing")
-                        ? {
-                            ...(it as UploadItemWithVideo),
-                            videoSettings,
-                          }
-                        : it
-                    )
-                  );
+                  // ✅ 使用者明確按下儲存 -> 之後上傳的影片視為「有自訂設定」
+                  setHasCustomVideoSettings(true);
                   setShowVideoSettings(false);
                 }}
                 className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"

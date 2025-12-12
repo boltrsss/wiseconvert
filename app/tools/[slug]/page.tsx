@@ -39,6 +39,7 @@ type StatusResponse = {
   message?: string | null;
   output_s3_key?: string | null;
   file_url?: string | null;
+  raw?: any; // 後端有塞 all_output_keys 在這裡
 };
 
 const API_BASE_URL =
@@ -149,8 +150,7 @@ export default function DynamicToolPage() {
           settings,
         }),
       });
-      if (!startRes.ok)
-        throw new Error(await startRes.text());
+      if (!startRes.ok) throw new Error(await startRes.text());
 
       const startData = await startRes.json();
       const jobId = startData.job_id ?? startData.jobId;
@@ -180,6 +180,18 @@ export default function DynamicToolPage() {
       await new Promise((r) => setTimeout(r, 2000));
     }
   };
+
+  // ---- 判斷是否 ZIP（例如 pdf-to-jpg 多頁） ----
+  const isZipResult =
+    !!status &&
+    (status.file_url?.toLowerCase().includes(".zip") ||
+      status.output_s3_key?.toLowerCase().endswith?.(".zip"));
+
+  const pagesCount =
+    (status?.raw &&
+      Array.isArray(status.raw.all_output_keys) &&
+      status.raw.all_output_keys.length) ||
+    undefined;
 
   // ------------------ UI ------------------
 
@@ -219,7 +231,9 @@ export default function DynamicToolPage() {
 
           return (
             <div key={key} className="space-y-1">
-              <label className="block text-sm font-medium">{def.label}</label>
+              <label className="block text-sm font-medium">
+                {def.label}
+              </label>
 
               {def.type === "select" && (
                 <select
@@ -265,12 +279,12 @@ export default function DynamicToolPage() {
         })}
       </section>
 
-      {/* Start button */}
+      {/* Start button & status */}
       <section className="p-4 border rounded-xl space-y-4">
         <h2 className="font-semibold text-lg">3. 開始轉換</h2>
 
         <button
-          className="border px-4 py-2 rounded-md"
+          className="border px-4 py-2 rounded-md disabled:opacity-50"
           disabled={isConverting || !file}
           onClick={startConversion}
         >
@@ -282,21 +296,56 @@ export default function DynamicToolPage() {
         )}
 
         {status && (
-          <div className="text-sm space-y-1">
+          <div className="text-sm space-y-2 mt-2">
             <p>
               狀態：<span className="font-semibold">{status.status}</span>
             </p>
             <p>進度：{status.progress}%</p>
-            {status.message && <p>{status.message}</p>}
+
+            {/* 後端訊息顯示區塊 */}
+            {status.message && (
+              <div className="text-xs text-gray-700 bg-gray-100 p-2 rounded border border-gray-200">
+                {status.message}
+              </div>
+            )}
 
             {status.status === "completed" && status.file_url && (
-              <a
-                href={status.file_url}
-                target="_blank"
-                className="mt-2 inline-block border px-3 py-1 rounded-md"
-              >
-                下載結果檔案
-              </a>
+              <div className="mt-3">
+                {isZipResult ? (
+                  <div className="flex flex-col items-start gap-2">
+                    <div className="text-green-600 font-semibold text-sm">
+                      ZIP 檔案已準備好，可以下載全部頁面。
+                    </div>
+                    <button
+                      onClick={() => {
+                        window.location.href = status.file_url!;
+                      }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition text-sm animate-pulse"
+                    >
+                      下載 ZIP（所有頁面）
+                    </button>
+                    {pagesCount && (
+                      <div className="text-xs text-gray-500">
+                        共 {pagesCount} 張 JPG 已打包。
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <a
+                    href={status.file_url}
+                    target="_blank"
+                    className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition text-sm"
+                  >
+                    下載結果檔案
+                  </a>
+                )}
+              </div>
+            )}
+
+            {status.status === "failed" && (
+              <p className="text-xs text-red-600">
+                轉換失敗，請確認檔案格式是否正確或稍後再試。
+              </p>
             )}
           </div>
         )}

@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 
 export const runtime = "edge";
 
+/* ---------- Types ---------- */
+
 type ToolSettingOption = {
   value: string | number;
   label: string;
@@ -42,16 +44,20 @@ type StatusResponse = {
   message?: string | null;
   output_s3_key?: string | null;
   file_url?: string | null;
-  raw?: Record<string, any> | null;
 };
+
+/* ---------- Config ---------- */
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
 
-// 用於去重（避免使用者重複選到同一個檔案造成清單爆炸）
+/* ---------- Utils ---------- */
+
 function fileFingerprint(f: File) {
-  return `${f.name}__${f.size}__${f.lastModified}`;
+  return `${f.name}_${f.size}_${f.lastModified}`;
 }
+
+/* ---------- Page ---------- */
 
 export default function DynamicToolPage() {
   const params = useParams();
@@ -59,76 +65,63 @@ export default function DynamicToolPage() {
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // ✅ Drag & Drop（Hook-safe，無第三方套件）
-  const dragIndexRef = useRef<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  // drag & drop
+  const dragFromRef = useRef<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
 
   const [tool, setTool] = useState<ToolSchema | null>(null);
-  const [loadingSchema, setLoadingSchema] = useState(true);
-  const [schemaError, setSchemaError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [files, setFiles] = useState<File[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
-  const [isWorking, setIsWorking] = useState(false);
+  const [working, setWorking] = useState(false);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
 
-  // 取得工具 schema（slug 改變才重置）
+  /* ---------- Load tool schema ---------- */
+
   useEffect(() => {
     let cancelled = false;
 
-    const fetchSchema = async () => {
+    async function load() {
       try {
-        setLoadingSchema(true);
-        setSchemaError(null);
+        setLoading(true);
+        setError(null);
         setTool(null);
         setFiles([]);
         setStatus(null);
         setStatusError(null);
 
         const res = await fetch(`${API_BASE_URL}/api/tools/${slug}`);
-        if (!res.ok) throw new Error("Tool not found.");
+        if (!res.ok) throw new Error("Tool not found");
 
         const data: ToolSchema = await res.json();
         if (cancelled) return;
 
         setTool(data);
 
-        // 初始化設定值
         const init: Record<string, any> = {};
-        Object.entries(data.settings || {}).forEach(([key, def]) => {
-          init[key] = def.default ?? "";
+        Object.entries(data.settings || {}).forEach(([k, v]) => {
+          init[k] = v.default ?? "";
         });
         setSettings(init);
-      } catch (err: any) {
-        if (!cancelled) {
-          setSchemaError(err?.message ?? "Failed to load tool schema.");
-        }
+      } catch (e: any) {
+        if (!cancelled) setError(e.message);
       } finally {
-        if (!cancelled) setLoadingSchema(false);
+        if (!cancelled) setLoading(false);
       }
-    };
+    }
 
-    fetchSchema();
+    load();
     return () => {
       cancelled = true;
     };
   }, [slug]);
 
-  const handleSettingChange = (key: string, value: any) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-  };
+  /* ---------- File handling ---------- */
 
-  const shouldShow = (key: string): boolean => {
-    const def = tool?.settings?.[key];
-    if (!def?.visibleWhen) return true;
-    const target = def.visibleWhen.field;
-    const expected = def.visibleWhen.equals;
-    return settings[target] === expected;
-  };
-
-  // ✅ 多檔工具：再選檔「追加」而不是覆蓋（且去重）
-  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!tool) return;
 
     const picked = e.target.files ? Array.from(e.target.files) : [];
@@ -137,50 +130,32 @@ export default function DynamicToolPage() {
     setStatus(null);
     setStatusError(null);
 
-    // 單檔工具：直接取第一個（覆蓋）
     if (!tool.allow_multiple) {
       setFiles([picked[0]]);
-      // 允許下一次選到同一個檔也能觸發 onChange
-      if (inputRef.current) inputRef.current.value = "";
-      return;
+    } else {
+      setFiles((prev) => {
+        const seen = new Set(prev.map(fileFingerprint));
+        const next = [...prev];
+        for (const f of picked) {
+          const fp = fileFingerprint(f);
+          if (!seen.has(fp)) {
+            seen.add(fp);
+            next.push(f);
+          }
+        }
+        return next;
+      });
     }
 
-    // 多檔工具：追加 + 去重
-    setFiles((prev) => {
-      const seen = new Set(prev.map(fileFingerprint));
-      const next = [...prev];
-      for (const f of picked) {
-        const fp = fileFingerprint(f);
-        if (!seen.has(fp)) {
-          next.push(f);
-          seen.add(fp);
-        }
-      }
-      return next;
-    });
-
-    // 允許下一次選到同一個檔也能觸發 onChange
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const removeFile = (index: number) => {
-    setFiles((prev) => {
-      const copy = [...prev];
-      copy.splice(index, 1);
-      return copy;
-    });
+  const removeFile = (idx: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
     setStatus(null);
     setStatusError(null);
   };
 
-  const clearFiles = () => {
-    setFiles([]);
-    setStatus(null);
-    setStatusError(null);
-    if (inputRef.current) inputRef.current.value = "";
-  };
-
-  // ✅ 拖曳排序：移動檔案（from -> to）
   const moveFile = (from: number, to: number) => {
     if (from === to) return;
     setFiles((prev) => {
@@ -192,37 +167,32 @@ export default function DynamicToolPage() {
     });
   };
 
+  /* ---------- Conversion ---------- */
+
   const poll = async (jobId: string) => {
-    let done = false;
-    while (!done) {
+    while (true) {
       const res = await fetch(`${API_BASE_URL}/api/status/${jobId}`, {
         cache: "no-store",
       });
       const data: StatusResponse = await res.json();
       setStatus(data);
-
-      if (data.status === "completed" || data.status === "failed") {
-        done = true;
-        break;
-      }
-
+      if (data.status === "completed" || data.status === "failed") break;
       await new Promise((r) => setTimeout(r, 1500));
     }
   };
 
-  const startAction = async () => {
+  const start = async () => {
     if (!tool || !files.length) return;
 
-    setIsWorking(true);
+    setWorking(true);
     setStatus(null);
     setStatusError(null);
 
     try {
-      // 1) 逐檔上傳到 S3，取得 keys（順序 = 目前 files 順序，會影響合併順序）
-      const uploadedKeys: string[] = [];
+      const keys: string[] = [];
 
       for (const file of files) {
-        const upRes = await fetch(`${API_BASE_URL}/api/get-upload-url`, {
+        const up = await fetch(`${API_BASE_URL}/api/get-upload-url`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -230,317 +200,150 @@ export default function DynamicToolPage() {
             content_type: file.type || "application/octet-stream",
           }),
         });
+        if (!up.ok) throw new Error("Upload URL failed");
+        const { upload_url, key } = await up.json();
 
-        if (!upRes.ok) throw new Error("Failed to get upload URL");
-        const { upload_url, key } = await upRes.json();
-
-        const putRes = await fetch(upload_url, {
+        const put = await fetch(upload_url, {
           method: "PUT",
           headers: { "Content-Type": file.type || "application/octet-stream" },
           body: file,
         });
+        if (!put.ok) throw new Error("Upload failed");
 
-        if (!putRes.ok) throw new Error("Upload failed");
-
-        uploadedKeys.push(key);
+        keys.push(key);
       }
 
-      if (!uploadedKeys.length) throw new Error("No files uploaded");
+      const ext =
+        files[0].name.split(".").pop()?.toLowerCase() ||
+        tool.output_formats[0];
 
-      // 2) output_format（通用）
-      const firstFile = files[0];
-      const extFromName =
-        firstFile?.name.includes(".") &&
-        firstFile.name.split(".").pop()?.toLowerCase();
-
-      const outputFormat =
-        settings.output_format ||
-        tool.output_formats?.[0] ||
-        extFromName ||
-        "pdf";
-
-      // 3) settings（多檔工具帶 files）
       const finalSettings: Record<string, any> = { ...settings };
+      if (tool.allow_multiple) finalSettings.files = keys;
 
-      if (tool.allow_multiple) {
-        // 多檔工具：永遠提供 files（即使只有 1 個也提供）
-        finalSettings.files = uploadedKeys;
-      }
-
-      // 4) start
-      const startRes = await fetch(`${API_BASE_URL}/api/start-conversion`, {
+      const res = await fetch(`${API_BASE_URL}/api/start-conversion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          s3_key: uploadedKeys[0], // 主檔（或第一個）
-          target_format: outputFormat,
+          s3_key: keys[0],
+          target_format: ext,
           tool_slug: tool.slug,
           settings: finalSettings,
         }),
       });
 
-      if (!startRes.ok) {
-        const txt = await startRes.text();
-        throw new Error(txt || "Failed to start");
-      }
+      if (!res.ok) throw new Error(await res.text());
 
-      const startData = await startRes.json();
-      const jobId = startData.job_id ?? startData.jobId;
-      if (!jobId) throw new Error("No job_id returned from backend");
-
-      await poll(jobId);
-    } catch (err: any) {
-      setStatusError(err?.message ?? "Unknown error");
+      const data = await res.json();
+      await poll(data.job_id ?? data.jobId);
+    } catch (e: any) {
+      setStatusError(e.message);
     } finally {
-      setIsWorking(false);
+      setWorking(false);
     }
   };
 
-  // ------------------ UI ------------------
+  /* ---------- UI ---------- */
 
-  if (loadingSchema) return <div className="p-8">Loading…</div>;
-  if (schemaError) return <div className="p-8 text-red-600">{schemaError}</div>;
+  if (loading) return <div className="p-8">Loading…</div>;
+  if (error) return <div className="p-8 text-red-600">{error}</div>;
   if (!tool) return <div className="p-8 text-red-600">Tool not found</div>;
 
   const isMulti = !!tool.allow_multiple;
-  const acceptStr =
-    tool.input_formats?.map((x) => `.${x.toLowerCase()}`).join(",") || undefined;
+  const isZip =
+    status?.file_url?.toLowerCase().includes(".zip") ||
+    status?.output_s3_key?.toLowerCase().endsWith(".zip");
 
-  const isZipResult =
-    !!status &&
-    (status.file_url?.toLowerCase().includes(".zip") ||
-      status.output_s3_key?.toLowerCase().endsWith(".zip"));
-
-  const actionLabel =
-    tool.slug === "pdf-merge" ? "開始合併" : "開始";
+  const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
 
   return (
     <div className="max-w-3xl mx-auto py-10 px-5 space-y-8">
-      <header>
-        <h1 className="text-3xl font-bold">{tool.name}</h1>
-        <p className="text-slate-600 mt-2">{tool.description}</p>
-      </header>
+      <h1 className="text-3xl font-bold">{tool.name}</h1>
+      <p className="text-slate-600">{tool.description}</p>
 
-      {/* File upload */}
+      {/* Upload */}
       <section className="p-4 border rounded-xl space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-lg">
-              1. 上傳檔案
-              {isMulti && (
-                <span className="ml-2 text-xs text-slate-500">(可多選 / 可追加 / 可拖曳排序)</span>
-              )}
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              支援的格式：{tool.input_formats.join(", ")}
-            </p>
-          </div>
-
-          {files.length > 0 && (
-            <button
-              type="button"
-              onClick={clearFiles}
-              className="text-xs text-slate-600 hover:text-slate-900 underline"
-            >
-              清空
-            </button>
-          )}
-        </div>
-
         <input
           ref={inputRef}
           type="file"
           multiple={isMulti}
-          accept={acceptStr}
-          onChange={handleFilesChange}
-          className="text-sm"
+          accept={tool.input_formats.map((x) => `.${x}`).join(",")}
+          onChange={onFilesChange}
         />
 
-        {isMulti && (
-          <div className="text-xs text-slate-500">
-            小提示：少選了檔案就再選一次會「追加」；要調整合併順序可直接拖曳清單排序。
-          </div>
-        )}
-
         {files.length > 0 && (
-          <div className="mt-2 space-y-2 text-sm">
-            <p className="font-medium">已選擇 {files.length} 個檔案：</p>
-
-            <ul className="space-y-2">
-              {files.map((f, idx) => (
-                <li
-                  key={fileFingerprint(f)}
-                  draggable={isMulti}
-                  onDragStart={() => {
-                    if (!isMulti) return;
-                    dragIndexRef.current = idx;
-                  }}
-                  onDragOver={(e) => {
-                    if (!isMulti) return;
-                    e.preventDefault();
-                    setDragOverIndex(idx);
-                  }}
-                  onDragLeave={() => {
-                    if (!isMulti) return;
-                    setDragOverIndex(null);
-                  }}
-                  onDrop={(e) => {
-                    if (!isMulti) return;
-                    e.preventDefault();
-                    if (dragIndexRef.current !== null) {
-                      moveFile(dragIndexRef.current, idx);
-                    }
-                    dragIndexRef.current = null;
-                    setDragOverIndex(null);
-                  }}
-                  className={`
-                    flex items-center justify-between
-                    border rounded-md px-3 py-2 bg-white
-                    transition
-                    ${isMulti ? "cursor-move" : "cursor-default"}
-                    ${
-                      dragOverIndex === idx
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-slate-200"
-                    }
-                  `}
-                  title={isMulti ? "拖曳以調整順序" : undefined}
+          <ul className="space-y-2 text-sm">
+            {files.map((f, i) => (
+              <li
+                key={fileFingerprint(f)}
+                draggable={isMulti}
+                onDragStart={() => (dragFromRef.current = i)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(i);
+                }}
+                onDrop={() => {
+                  if (dragFromRef.current !== null) {
+                    moveFile(dragFromRef.current, i);
+                  }
+                  dragFromRef.current = null;
+                  setDragOver(null);
+                }}
+                className={`flex items-center justify-between border rounded-md px-3 py-2 ${
+                  dragOver === i ? "bg-blue-50 border-blue-500" : ""
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {isMulti && (
+                    <span className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-xs font-semibold">
+                      {i + 1}
+                    </span>
+                  )}
+                  <span className="truncate">{f.name}</span>
+                </div>
+                <button
+                  onClick={() => removeFile(i)}
+                  className="text-xs text-red-500"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {isMulti && <span className="text-slate-400 text-sm">☰</span>}
-                    <span className="truncate mr-2">{f.name}</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="text-xs text-red-500 hover:underline shrink-0"
-                    onClick={() => removeFile(idx)}
-                  >
-                    移除
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {isMulti && tool.slug === "pdf-merge" && files.length > 1 && (
-              <div className="text-xs text-slate-600">
-                合併順序會依照上面清單由上到下（可拖曳調整）。
-              </div>
-            )}
-          </div>
+                  移除
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
-      {/* Settings form */}
-      <section className="p-4 border rounded-xl space-y-3">
-        <h2 className="font-semibold text-lg">2. 設定參數</h2>
-
-        {Object.entries(tool.settings || {}).length === 0 && (
-          <p className="text-sm text-slate-500">此工具無需額外設定。</p>
-        )}
-
-        {Object.entries(tool.settings || {}).map(([key, def]) => {
-          if (!shouldShow(key)) return null;
-
-          return (
-            <div key={key} className="space-y-1">
-              <label className="block text-sm font-medium">{def.label}</label>
-
-              {def.type === "select" && (
-                <select
-                  className="border rounded-md px-3 py-2 text-sm w-full"
-                  value={settings[key] ?? ""}
-                  onChange={(e) => handleSettingChange(key, e.target.value)}
-                >
-                  {def.options?.map((opt) => (
-                    <option key={String(opt.value)} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {def.type === "number" && (
-                <input
-                  type="number"
-                  className="border rounded-md px-3 py-2 text-sm w-full"
-                  value={settings[key] ?? ""}
-                  min={def.min}
-                  max={def.max}
-                  step={def.step ?? 1}
-                  onChange={(e) => handleSettingChange(key, Number(e.target.value))}
-                />
-              )}
-
-              {def.type === "boolean" && (
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={!!settings[key]}
-                    onChange={(e) => handleSettingChange(key, e.target.checked)}
-                  />
-                  <span className="text-slate-700">Enable</span>
-                </label>
-              )}
-            </div>
-          );
-        })}
-      </section>
-
-      {/* Start button & status */}
-      <section className="p-4 border rounded-xl space-y-4">
-        <h2 className="font-semibold text-lg">3. 開始</h2>
-
+      {/* Start */}
+      <section className="space-y-4">
         <button
-          className="
-            bg-blue-600 hover:bg-blue-700
-            text-white font-medium
-            px-5 py-2 rounded-lg
-            disabled:opacity-50
-          "
-          disabled={isWorking || files.length === 0}
-          onClick={startAction}
+          disabled={working || !files.length}
+          onClick={start}
+          className="bg-blue-600 text-white px-5 py-2 rounded-lg disabled:opacity-50"
         >
-          {isWorking ? "處理中…" : actionLabel}
+          {working ? "處理中…" : actionLabel}
         </button>
 
-        {statusError && <p className="text-sm text-red-600">{statusError}</p>}
+        {statusError && <p className="text-red-600">{statusError}</p>}
 
         {status && (
           <div className="text-sm space-y-1">
-            <p>
-              狀態：<span className="font-semibold">{status.status}</span>
-            </p>
+            <p>狀態：{status.status}</p>
             <p>進度：{status.progress}%</p>
-            {status.message && <p className="text-slate-700">{status.message}</p>}
-
+            {status.message && <p>{status.message}</p>}
             {status.status === "completed" && status.file_url && (
-              <div className="mt-2 space-y-2">
-                {isZipResult && (
-                  <div className="text-xs text-slate-600">
-                    這次結果包含多個輸出，已自動打包成 ZIP 檔。下載後解壓即可取得全部檔案。
-                  </div>
+              <>
+                {isZip && (
+                  <p className="text-xs text-slate-500">
+                    已打包為 ZIP，下載後解壓即可。
+                  </p>
                 )}
                 <a
                   href={status.file_url}
                   target="_blank"
-                  className="
-                    inline-block
-                    bg-slate-900 hover:bg-slate-800
-                    text-white
-                    px-4 py-2 rounded-lg
-                    text-sm
-                  "
+                  className="inline-block bg-slate-900 text-white px-4 py-2 rounded"
                 >
                   下載結果
                 </a>
-              </div>
-            )}
-
-            {status.status === "failed" && (
-              <p className="text-sm text-red-600">
-                轉換失敗，請檢查檔案格式或稍後再試。
-              </p>
+              </>
             )}
           </div>
         )}

@@ -431,6 +431,31 @@ export default function DynamicToolPage() {
         )}
       </section>
 
+            {/* Output format */}
+      {tool.output_formats && tool.output_formats.length > 0 && (
+        <section className="p-4 border rounded-xl space-y-3">
+          <h2 className="font-semibold text-lg">2. 輸出格式</h2>
+
+          <select
+            className="border rounded-md px-3 py-2 text-sm w-full"
+            value={settings.output_format ?? tool.output_formats[0]}
+            onChange={(e) =>
+              handleSettingChange("output_format", e.target.value)
+            }
+          >
+            {tool.output_formats.map((fmt) => (
+              <option key={fmt} value={fmt}>
+                {fmt.toUpperCase()}
+              </option>
+            ))}
+          </select>
+
+          <p className="text-xs text-slate-500">
+            選擇轉換後的輸出格式
+          </p>
+        </section>
+      )}
+
       {/* Settings form */}
       <section className="p-4 border rounded-xl space-y-3">
         <h2 className="font-semibold text-lg">2. 設定參數</h2>

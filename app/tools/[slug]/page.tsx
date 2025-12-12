@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+
 export const runtime = "edge";
 
 type ToolSettingOption = {
@@ -27,8 +28,10 @@ type ToolSchema = {
   slug: string;
   name: string;
   description: string;
+  category?: string;
   input_formats: string[];
   output_formats: string[];
+  allow_multiple?: boolean;
   settings: Record<string, ToolSetting>;
 };
 
@@ -39,7 +42,7 @@ type StatusResponse = {
   message?: string | null;
   output_s3_key?: string | null;
   file_url?: string | null;
-  raw?: any; // 後端有塞 all_output_keys 在這裡
+  raw?: Record<string, any> | null;
 };
 
 const API_BASE_URL =
@@ -53,7 +56,7 @@ export default function DynamicToolPage() {
   const [loadingSchema, setLoadingSchema] = useState(true);
   const [schemaError, setSchemaError] = useState<string | null>(null);
 
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [isConverting, setIsConverting] = useState(false);
   const [status, setStatus] = useState<StatusResponse | null>(null);
@@ -64,6 +67,12 @@ export default function DynamicToolPage() {
     const fetchSchema = async () => {
       try {
         setLoadingSchema(true);
+        setSchemaError(null);
+        setTool(null);
+        setFiles([]);
+        setStatus(null);
+        setStatusError(null);
+
         const res = await fetch(`${API_BASE_URL}/api/tools/${slug}`);
         if (!res.ok) throw new Error("Tool not found.");
 
@@ -72,12 +81,12 @@ export default function DynamicToolPage() {
 
         // 初始化設定值
         const init: Record<string, any> = {};
-        Object.entries(data.settings).forEach(([key, def]) => {
+        Object.entries(data.settings || {}).forEach(([key, def]) => {
           init[key] = def.default ?? "";
         });
         setSettings(init);
       } catch (err: any) {
-        setSchemaError(err.message);
+        setSchemaError(err.message ?? "Failed to load tool schema.");
       } finally {
         setLoadingSchema(false);
       }
@@ -99,66 +108,124 @@ export default function DynamicToolPage() {
     return settings[target] === expected;
   };
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFile(e.target.files?.[0] ?? null);
+  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!tool) return;
+
+    const list = e.target.files ? Array.from(e.target.files) : [];
+    if (!list.length) {
+      setFiles([]);
+      setStatus(null);
+      setStatusError(null);
+      return;
+    }
+
+    // 單檔工具只取第一個
+    if (!tool.allow_multiple && list.length > 1) {
+      setFiles([list[0]]);
+    } else {
+      setFiles(list);
+    }
+
+    setStatus(null);
+    setStatusError(null);
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => {
+      const copy = [...prev];
+      copy.splice(index, 1);
+      return copy;
+    });
     setStatus(null);
     setStatusError(null);
   };
 
   const startConversion = async () => {
-    if (!tool || !file) return;
+    if (!tool || !files.length) return;
 
     setIsConverting(true);
     setStatus(null);
     setStatusError(null);
 
     try {
-      // 1) get upload url
-      const upRes = await fetch(`${API_BASE_URL}/api/get-upload-url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_name: file.name,
-          content_type: file.type || "application/octet-stream",
-        }),
-      });
-      if (!upRes.ok) throw new Error("Failed to get upload URL");
-      const { upload_url, key } = await upRes.json();
+      // 1) 逐檔案上傳到 S3，取得 key 陣列
+      const uploadedKeys: string[] = [];
 
-      // 2) upload
-      const putRes = await fetch(upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-        body: file,
-      });
-      if (!putRes.ok) throw new Error("Upload failed");
+      for (const file of files) {
+        // 1-1) 取得 upload url
+        const upRes = await fetch(`${API_BASE_URL}/api/get-upload-url`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            file_name: file.name,
+            content_type: file.type || "application/octet-stream",
+          }),
+        });
+        if (!upRes.ok) throw new Error("Failed to get upload URL");
+        const { upload_url, key } = await upRes.json();
 
-      // 3) get output_format
+        // 1-2) 上傳檔案
+        const putRes = await fetch(upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        if (!putRes.ok) throw new Error("Upload failed");
+
+        uploadedKeys.push(key);
+      }
+
+      if (!uploadedKeys.length) {
+        throw new Error("No files uploaded");
+      }
+
+      // 2) 決定 output_format（通用邏輯）
+      const firstFile = files[0];
+      const extFromName =
+        firstFile?.name.includes(".") &&
+        firstFile.name.split(".").pop()?.toLowerCase();
+
       const outputFormat =
         settings.output_format ||
         tool.output_formats?.[0] ||
-        file.name.split(".").pop();
+        extFromName ||
+        "pdf";
+
+      // 3) 組合 settings（含多檔工具的 files）
+      const finalSettings: Record<string, any> = {
+        ...settings,
+      };
+
+      // 如果有多檔就帶 files，單檔工具不會用到這欄位
+      if (uploadedKeys.length > 1) {
+        finalSettings.files = uploadedKeys;
+      }
 
       // 4) start conversion
       const startRes = await fetch(`${API_BASE_URL}/api/start-conversion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          s3_key: key,
+          s3_key: uploadedKeys[0],      // 主檔案（或第一個）
           target_format: outputFormat,
           tool_slug: tool.slug,
-          settings,
+          settings: finalSettings,
         }),
       });
-      if (!startRes.ok) throw new Error(await startRes.text());
+
+      if (!startRes.ok) {
+        const txt = await startRes.text();
+        throw new Error(txt || "Failed to start conversion");
+      }
 
       const startData = await startRes.json();
       const jobId = startData.job_id ?? startData.jobId;
+      if (!jobId) throw new Error("No job_id returned from backend");
 
-      // 5) poll
+      // 5) poll 狀態
       await poll(jobId);
     } catch (err: any) {
-      setStatusError(err.message);
+      setStatusError(err.message ?? "Unknown error");
     } finally {
       setIsConverting(false);
     }
@@ -181,20 +248,6 @@ export default function DynamicToolPage() {
     }
   };
 
-  // ---- 判斷是否 ZIP（例如 pdf-to-jpg 多頁） ----
-  const isZipResult =
-  !!status &&
-  (
-    status.file_url?.toLowerCase()?.includes(".zip") ||
-    status.output_s3_key?.toLowerCase()?.endsWith(".zip")
-  );
-
-  const pagesCount =
-    (status?.raw &&
-      Array.isArray(status.raw.all_output_keys) &&
-      status.raw.all_output_keys.length) ||
-    undefined;
-
   // ------------------ UI ------------------
 
   if (loadingSchema) return <div className="p-8">Loading…</div>;
@@ -203,6 +256,17 @@ export default function DynamicToolPage() {
       <div className="p-8 text-red-600">
         {schemaError ?? "Tool not found"}
       </div>
+    );
+
+  const isMulti = !!tool.allow_multiple;
+  const selectedExts =
+    tool.input_formats?.map((x) => `.${x.toLowerCase()}`).join(",") || undefined;
+
+  const isZipResult =
+    !!status &&
+    (
+      status.file_url?.toLowerCase()?.includes(".zip") ||
+      status.output_s3_key?.toLowerCase()?.endsWith(".zip")
     );
 
   return (
@@ -214,28 +278,65 @@ export default function DynamicToolPage() {
 
       {/* File upload */}
       <section className="p-4 border rounded-xl space-y-3">
-        <h2 className="font-semibold text-lg">1. 上傳檔案</h2>
+        <h2 className="font-semibold text-lg">
+          1. 上傳檔案
+          {isMulti && <span className="ml-2 text-xs text-slate-500">(可多選)</span>}
+        </h2>
+
         <input
           type="file"
-          accept={tool.input_formats.map((x) => `.${x}`).join(",")}
-          onChange={handleFile}
+          multiple={isMulti}
+          accept={selectedExts}
+          onChange={handleFilesChange}
           className="text-sm"
         />
-        {file && <p className="text-sm">檔案：{file.name}</p>}
+
+        {files.length > 0 && (
+          <div className="mt-2 space-y-1 text-sm">
+            <p className="font-medium">
+              已選擇 {files.length} 個檔案：
+            </p>
+            <ul className="space-y-1">
+              {files.map((f, idx) => (
+                <li
+                  key={idx}
+                  className="flex items-center justify-between border rounded-md px-2 py-1"
+                >
+                  <span className="truncate mr-2">{f.name}</span>
+                  <button
+                    type="button"
+                    className="text-xs text-red-500 hover:underline"
+                    onClick={() => removeFile(idx)}
+                  >
+                    移除
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {files.length === 0 && (
+          <p className="text-xs text-slate-500">
+            支援的格式：{tool.input_formats.join(", ")}
+          </p>
+        )}
       </section>
 
       {/* Settings form */}
       <section className="p-4 border rounded-xl space-y-3">
         <h2 className="font-semibold text-lg">2. 設定參數</h2>
 
-        {Object.entries(tool.settings).map(([key, def]) => {
+        {Object.entries(tool.settings || {}).length === 0 && (
+          <p className="text-sm text-slate-500">此工具無需額外設定。</p>
+        )}
+
+        {Object.entries(tool.settings || {}).map(([key, def]) => {
           if (!shouldShow(key)) return null;
 
           return (
             <div key={key} className="space-y-1">
-              <label className="block text-sm font-medium">
-                {def.label}
-              </label>
+              <label className="block text-sm font-medium">{def.label}</label>
 
               {def.type === "select" && (
                 <select
@@ -287,7 +388,7 @@ export default function DynamicToolPage() {
 
         <button
           className="border px-4 py-2 rounded-md disabled:opacity-50"
-          disabled={isConverting || !file}
+          disabled={isConverting || !files.length}
           onClick={startConversion}
         >
           {isConverting ? "處理中…" : "Start Conversion"}
@@ -298,56 +399,28 @@ export default function DynamicToolPage() {
         )}
 
         {status && (
-          <div className="text-sm space-y-2 mt-2">
+          <div className="text-sm space-y-1">
             <p>
               狀態：<span className="font-semibold">{status.status}</span>
             </p>
             <p>進度：{status.progress}%</p>
-
-            {/* 後端訊息顯示區塊 */}
-            {status.message && (
-              <div className="text-xs text-gray-700 bg-gray-100 p-2 rounded border border-gray-200">
-                {status.message}
-              </div>
-            )}
+            {status.message && <p>{status.message}</p>}
 
             {status.status === "completed" && status.file_url && (
-              <div className="mt-3">
-                {isZipResult ? (
-                  <div className="flex flex-col items-start gap-2">
-                    <div className="text-green-600 font-semibold text-sm">
-                      ZIP 檔案已準備好，可以下載全部頁面。
-                    </div>
-                    <button
-                      onClick={() => {
-                        window.location.href = status.file_url!;
-                      }}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition text-sm animate-pulse"
-                    >
-                      下載 ZIP（所有頁面）
-                    </button>
-                    {pagesCount && (
-                      <div className="text-xs text-gray-500">
-                        共 {pagesCount} 張 JPG 已打包。
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <a
-                    href={status.file_url}
-                    target="_blank"
-                    className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition text-sm"
-                  >
-                    下載結果檔案
-                  </a>
+              <div className="mt-2 space-y-1">
+                {isZipResult && (
+                  <p className="text-xs text-slate-600">
+                    多個檔案或多頁結果已打包成 ZIP 檔，下載後解壓即可查看所有檔案。
+                  </p>
                 )}
+                <a
+                  href={status.file_url}
+                  target="_blank"
+                  className="inline-block border px-3 py-1 rounded-md"
+                >
+                  下載結果檔案
+                </a>
               </div>
-            )}
-
-            {status.status === "failed" && (
-              <p className="text-xs text-red-600">
-                轉換失敗，請確認檔案格式是否正確或稍後再試。
-              </p>
             )}
           </div>
         )}

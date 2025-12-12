@@ -1,230 +1,305 @@
-// app/tools/[slug]/page.tsx
+"use client";
 
-import React from "react";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import FileUpload from "@/components/FileUpload";
-import { AdSlot } from "@/components/AdSlot";
-import { getToolBySlug } from "@/lib/toolsConfig";
-import type { ToolDefinition } from "@/lib/toolsConfig";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import ToolSeoClient from "./ToolSeoClient"; // ✅ 新增
+import React, { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 
-export const runtime = "edge";
-
-type ToolPageProps = {
-  params: { slug: string };
+type ToolSettingOption = {
+  value: string | number;
+  label: string;
 };
 
-export default function ToolPage({ params }: ToolPageProps) {
-  const tool = getToolBySlug(params.slug) as ToolDefinition | undefined;
+type ToolSetting = {
+  type: "select" | "number" | "boolean";
+  label: string;
+  options?: ToolSettingOption[];
+  default?: any;
+  min?: number;
+  max?: number;
+  step?: number;
+  visibleWhen?: {
+    field: string;
+    equals: any;
+  };
+};
 
-  if (!tool) {
-    return notFound();
-  }
+type ToolSchema = {
+  slug: string;
+  name: string;
+  description: string;
+  input_formats: string[];
+  output_formats: string[];
+  settings: Record<string, ToolSetting>;
+};
 
-  const primaryOutput = tool.outputFormats[0]?.toUpperCase() ?? "PNG";
-  const primaryInput = tool.inputFormats[0]?.toUpperCase() ?? "JPG";
+type StatusResponse = {
+  job_id: string;
+  status: string;
+  progress: number;
+  message?: string | null;
+  output_s3_key?: string | null;
+  file_url?: string | null;
+};
 
-  const title = tool.title.en;
-  const description = tool.shortDescription.en;
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
+
+export default function DynamicToolPage() {
+  const params = useParams();
+  const slug = params.slug as string;
+
+  const [tool, setTool] = useState<ToolSchema | null>(null);
+  const [loadingSchema, setLoadingSchema] = useState(true);
+  const [schemaError, setSchemaError] = useState<string | null>(null);
+
+  const [file, setFile] = useState<File | null>(null);
+  const [settings, setSettings] = useState<Record<string, any>>({});
+  const [isConverting, setIsConverting] = useState(false);
+  const [status, setStatus] = useState<StatusResponse | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  // 取得工具 schema
+  useEffect(() => {
+    const fetchSchema = async () => {
+      try {
+        setLoadingSchema(true);
+        const res = await fetch(`${API_BASE_URL}/api/tools/${slug}`);
+        if (!res.ok) throw new Error("Tool not found.");
+
+        const data: ToolSchema = await res.json();
+        setTool(data);
+
+        // 初始化設定值
+        const init: Record<string, any> = {};
+        Object.entries(data.settings).forEach(([key, def]) => {
+          init[key] = def.default ?? "";
+        });
+        setSettings(init);
+      } catch (err: any) {
+        setSchemaError(err.message);
+      } finally {
+        setLoadingSchema(false);
+      }
+    };
+
+    fetchSchema();
+  }, [slug]);
+
+  const handleSettingChange = (key: string, value: any) =>
+    setSettings((prev) => ({ ...prev, [key]: value }));
+
+  const shouldShow = (key: string): boolean => {
+    const def = tool?.settings[key];
+    if (!def?.visibleWhen) return true;
+
+    const target = def.visibleWhen.field;
+    const expected = def.visibleWhen.equals;
+
+    return settings[target] === expected;
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFile(e.target.files?.[0] ?? null);
+    setStatus(null);
+    setStatusError(null);
+  };
+
+  const startConversion = async () => {
+    if (!tool || !file) return;
+
+    setIsConverting(true);
+    setStatus(null);
+    setStatusError(null);
+
+    try {
+      // 1) get upload url
+      const upRes = await fetch(`${API_BASE_URL}/api/get-upload-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          file_name: file.name,
+          content_type: file.type || "application/octet-stream",
+        }),
+      });
+      if (!upRes.ok) throw new Error("Failed to get upload URL");
+      const { upload_url, key } = await upRes.json();
+
+      // 2) upload
+      const putRes = await fetch(upload_url, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error("Upload failed");
+
+      // 3) get output_format
+      const outputFormat =
+        settings.output_format ||
+        tool.output_formats?.[0] ||
+        file.name.split(".").pop();
+
+      // 4) start conversion
+      const startRes = await fetch(`${API_BASE_URL}/api/start-conversion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          s3_key: key,
+          target_format: outputFormat,
+          tool_slug: tool.slug,
+          settings,
+        }),
+      });
+      if (!startRes.ok)
+        throw new Error(await startRes.text());
+
+      const startData = await startRes.json();
+      const jobId = startData.job_id ?? startData.jobId;
+
+      // 5) poll
+      await poll(jobId);
+    } catch (err: any) {
+      setStatusError(err.message);
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  const poll = async (jobId: string) => {
+    let done = false;
+
+    while (!done) {
+      const res = await fetch(`${API_BASE_URL}/api/status/${jobId}`);
+      const data: StatusResponse = await res.json();
+      setStatus(data);
+
+      if (data.status === "completed" || data.status === "failed") {
+        done = true;
+        break;
+      }
+
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  };
+
+  // ------------------ UI ------------------
+
+  if (loadingSchema) return <div className="p-8">Loading…</div>;
+  if (!tool)
+    return (
+      <div className="p-8 text-red-600">
+        {schemaError ?? "Tool not found"}
+      </div>
+    );
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* Header：Logo + 回首頁 + 語言切換 */}
-      <header className="border-b border-slate-200 bg-white">
-        <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-              W
-            </div>
-            <span className="text-xl font-semibold tracking-tight">
-              Wise<span className="text-blue-600">Convert</span>
-            </span>
-          </a>
-
-          <div className="flex items-center gap-4">
-            {/* 左邊：Back to Home + 類別文字 */}
-            <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-500">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
-              >
-                <span>←</span>
-                <span>Back to Home</span>
-              </Link>
-              <span className="hidden sm:inline">
-                {tool.category.toUpperCase()} TOOL
-              </span>
-            </div>
-
-            {/* 右邊：語言切換 */}
-            <LanguageSwitcher />
-          </div>
-        </div>
+    <div className="max-w-3xl mx-auto py-10 px-5 space-y-8">
+      <header>
+        <h1 className="text-3xl font-bold">{tool.name}</h1>
+        <p className="text-slate-600 mt-2">{tool.description}</p>
       </header>
 
-      <main className="flex-1 pb-20 lg:pb-0">
-        <section className="bg-slate-50 border-b border-slate-200">
-          <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 py-8 lg:py-10">
-            {/* TOP 廣告：桌機 + 手機 */}
-            <div className="mb-6">
-              <div className="hidden lg:block">
-                <AdSlot
-                  slotId="tool-top-desktop"
-                  label="AD TOOL TOP — 970×90 / 728×90"
-                  className="h-20"
+      {/* File upload */}
+      <section className="p-4 border rounded-xl space-y-3">
+        <h2 className="font-semibold text-lg">1. 上傳檔案</h2>
+        <input
+          type="file"
+          accept={tool.input_formats.map((x) => `.${x}`).join(",")}
+          onChange={handleFile}
+          className="text-sm"
+        />
+        {file && <p className="text-sm">檔案：{file.name}</p>}
+      </section>
+
+      {/* Settings form */}
+      <section className="p-4 border rounded-xl space-y-3">
+        <h2 className="font-semibold text-lg">2. 設定參數</h2>
+
+        {Object.entries(tool.settings).map(([key, def]) => {
+          if (!shouldShow(key)) return null;
+
+          return (
+            <div key={key} className="space-y-1">
+              <label className="block text-sm font-medium">{def.label}</label>
+
+              {def.type === "select" && (
+                <select
+                  className="border rounded-md px-3 py-1 text-sm w-full"
+                  value={settings[key] ?? ""}
+                  onChange={(e) =>
+                    handleSettingChange(key, e.target.value)
+                  }
+                >
+                  {def.options?.map((opt) => (
+                    <option key={String(opt.value)} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {def.type === "number" && (
+                <input
+                  type="number"
+                  className="border rounded-md px-3 py-1 text-sm w-full"
+                  value={settings[key] ?? ""}
+                  min={def.min}
+                  max={def.max}
+                  step={def.step ?? 1}
+                  onChange={(e) =>
+                    handleSettingChange(key, Number(e.target.value))
+                  }
                 />
-              </div>
-              <div className="lg:hidden">
-                <AdSlot
-                  slotId="tool-top-mobile"
-                  label="AD TOOL TOP MOBILE — 320×100"
-                  className="h-16"
+              )}
+
+              {def.type === "boolean" && (
+                <input
+                  type="checkbox"
+                  checked={!!settings[key]}
+                  onChange={(e) =>
+                    handleSettingChange(key, e.target.checked)
+                  }
                 />
-              </div>
+              )}
             </div>
+          );
+        })}
+      </section>
 
-            {/* Breadcrumb + Hero */}
-            <div className="mb-6 max-w-3xl">
-              <div className="text-[11px] text-slate-400 mb-2">
-                <Link href="/" className="hover:underline">
-                  Home
-                </Link>
-                <span className="mx-1">/</span>
-                <Link href="/tools" className="hover:underline">
-                  Tools
-                </Link>
-                <span className="mx-1">/</span>
-                <span>{title}</span>
-              </div>
-              <h1 className="text-3xl sm:text-[34px] font-semibold text-slate-900 mb-2">
-                {title}
-              </h1>
-              <p className="text-sm sm:text-base text-slate-500 mb-1.5">
-                {description}
-              </p>
-              <p className="text-xs text-slate-400">
-                Supported input: {tool.inputFormats.join(", ").toUpperCase()} •{" "}
-                Output: {tool.outputFormats.join(", ").toUpperCase()}
-              </p>
-            </div>
+      {/* Start button */}
+      <section className="p-4 border rounded-xl space-y-4">
+        <h2 className="font-semibold text-lg">3. 開始轉換</h2>
 
-            {/* 主體：左工具 + 右側欄（廣告優先，說明在下方） */}
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-6 items-start">
-              {/* 左側：FileUpload + 中間橫幅 */}
-              <div className="space-y-4">
-                <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm px-4 sm:px-8 py-6">
-                  <FileUpload
-                    inputFormat={primaryInput}
-                    outputFormat={primaryOutput}
-                  />
-                </div>
+        <button
+          className="border px-4 py-2 rounded-md"
+          disabled={isConverting || !file}
+          onClick={startConversion}
+        >
+          {isConverting ? "處理中…" : "Start Conversion"}
+        </button>
 
-                {/* 左側：in-content 廣告（桌機橫幅 + 手機） */}
-                <div className="space-y-3">
-                  <div className="hidden lg:flex">
-                    <AdSlot
-                      slotId="tool-in-content-desktop"
-                      label="AD TOOL IN-CONTENT — 728×90 / 468×60"
-                      className="h-20 w-full"
-                    />
-                  </div>
-                  <div className="lg:hidden">
-                    <AdSlot
-                      slotId="tool-in-content-mobile"
-                      label="AD TOOL IN-CONTENT — 320×100"
-                      className="h-20"
-                    />
-                  </div>
-                </div>
-              </div>
+        {statusError && (
+          <p className="text-sm text-red-600">{statusError}</p>
+        )}
 
-              {/* 右側：側欄廣告 + 說明（說明在最下方） */}
-              <aside className="space-y-4">
-                {/* 兩個 300×250 廣告位 */}
-                <div className="hidden lg:block">
-                  <AdSlot
-                    slotId="tool-sidebar-top"
-                    label="AD TOOL SIDEBAR TOP — 300×250"
-                    className="w-full h-[250px]"
-                  />
-                </div>
-                <div className="hidden lg:block">
-                  <AdSlot
-                    slotId="tool-sidebar-middle"
-                    label="AD TOOL SIDEBAR MID — 300×250"
-                    className="w-full h-[250px]"
-                  />
-                </div>
+        {status && (
+          <div className="text-sm space-y-1">
+            <p>
+              狀態：<span className="font-semibold">{status.status}</span>
+            </p>
+            <p>進度：{status.progress}%</p>
+            {status.message && <p>{status.message}</p>}
 
-                {/* 說明區塊放在側欄最下方（英文固定文案即可） */}
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
-                  <h2 className="text-base font-semibold text-slate-900 mb-2">
-                    How this converter works
-                  </h2>
-                  <ol className="list-decimal list-inside space-y-1 text-xs sm:text-sm">
-                    <li>Upload your file using drag &amp; drop or click.</li>
-                    <li>
-                      WiseConvert converts it in the cloud to {primaryOutput}.
-                    </li>
-                    <li>Download your converted file instantly.</li>
-                  </ol>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm text-slate-600">
-                  <h3 className="text-sm font-semibold text-slate-900 mb-1">
-                    Why use WiseConvert?
-                  </h3>
-                  <ul className="list-disc list-inside space-y-1 text-xs sm:text-sm">
-                    <li>No software install, all in browser.</li>
-                    <li>Fast cloud processing and secure transfer.</li>
-                    <li>
-                      More tools coming soon: images, video, audio &amp; PDF.
-                    </li>
-                  </ul>
-                </div>
-              </aside>
-            </div>
-
-            {/* ✅ 下方 SEO + FAQ + Related Tools（多語系 + JSON-LD） */}
-            <ToolSeoClient
-              tool={tool}
-              primaryInput={primaryInput}
-              primaryOutput={primaryOutput}
-            />
-
-            {/* 底部：全寬 Banner 廣告 */}
-            <div className="mt-8">
-              <div className="hidden lg:flex">
-                <AdSlot
-                  slotId="tool-bottom-desktop"
-                  label="AD TOOL BOTTOM — 970×90 / 728×90"
-                  className="h-20 w-full"
-                />
-              </div>
-              <div className="lg:hidden">
-                <AdSlot
-                  slotId="tool-bottom-mobile"
-                  label="AD TOOL BOTTOM MOBILE — 320×100"
-                  className="h-16"
-                />
-              </div>
-            </div>
+            {status.status === "completed" && status.file_url && (
+              <a
+                href={status.file_url}
+                target="_blank"
+                className="mt-2 inline-block border px-3 py-1 rounded-md"
+              >
+                下載結果檔案
+              </a>
+            )}
           </div>
-        </section>
-      </main>
-
-      {/* 手機 Sticky 底部廣告（工具頁） */}
-      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden">
-        <div className="max-w-screen-sm mx-auto px-3 pb-2">
-          <AdSlot
-            slotId="tool-sticky-mobile"
-            label="AD TOOL STICKY MOBILE — 320×50"
-            className="h-12 shadow-lg"
-          />
-        </div>
-      </div>
+        )}
+      </section>
     </div>
   );
 }

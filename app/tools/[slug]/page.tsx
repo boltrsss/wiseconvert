@@ -458,7 +458,7 @@ export default function DynamicToolPage() {
 
       {/* Settings form */}
       <section className="p-4 border rounded-xl space-y-3">
-        <h2 className="font-semibold text-lg">2. 設定參數</h2>
+        <h2 className="font-semibold text-lg">3. 進階設定</h2>
 
         {Object.entries(tool.settings || {}).length === 0 && (
           <p className="text-sm text-slate-500">此工具無需額外設定。</p>
@@ -514,8 +514,7 @@ export default function DynamicToolPage() {
 
       {/* Start button & status */}
       <section className="p-4 border rounded-xl space-y-4">
-        <h2 className="font-semibold text-lg">3. 開始</h2>
-
+        <h2 className="font-semibold text-lg">4. 開始</h2>
         <button
           className="
             bg-blue-600 hover:bg-blue-700

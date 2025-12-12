@@ -183,9 +183,11 @@ export default function DynamicToolPage() {
 
   // ---- 判斷是否 ZIP（例如 pdf-to-jpg 多頁） ----
   const isZipResult =
-    !!status &&
-    (status.file_url?.toLowerCase().includes(".zip") ||
-      status.output_s3_key?.toLowerCase().endswith?.(".zip"));
+  !!status &&
+  (
+    status.file_url?.toLowerCase()?.includes(".zip") ||
+    status.output_s3_key?.toLowerCase()?.endsWith(".zip")
+  );
 
   const pagesCount =
     (status?.raw &&

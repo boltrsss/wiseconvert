@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 
 export const runtime = "edge";
 
-/* ---------- Types ---------- */
+/* ---------------- types ---------------- */
 
 type ToolSettingOption = {
   value: string | number;
@@ -44,34 +44,30 @@ type StatusResponse = {
   message?: string | null;
   output_s3_key?: string | null;
   file_url?: string | null;
+  raw?: Record<string, any> | null;
 };
-
-/* ---------- Config ---------- */
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
 
-/* ---------- Utils ---------- */
+/* ---------------- utils ---------------- */
 
 function fileFingerprint(f: File) {
-  return `${f.name}_${f.size}_${f.lastModified}`;
+  return `${f.name}__${f.size}__${f.lastModified}`;
 }
 
-/* ---------- Page ---------- */
+/* ---------------- page ---------------- */
 
 export default function DynamicToolPage() {
   const params = useParams();
   const slug = (params.slug as string) || "";
 
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  // drag & drop
-  const dragFromRef = useRef<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
+  const dragIndexRef = useRef<number | null>(null);
 
   const [tool, setTool] = useState<ToolSchema | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [schemaError, setSchemaError] = useState<string | null>(null);
 
   const [files, setFiles] = useState<File[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
@@ -79,19 +75,18 @@ export default function DynamicToolPage() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
 
-  /* ---------- Load tool schema ---------- */
+  /* -------- load tool schema -------- */
 
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    (async () => {
       try {
         setLoading(true);
-        setError(null);
+        setSchemaError(null);
         setTool(null);
         setFiles([]);
         setStatus(null);
-        setStatusError(null);
 
         const res = await fetch(`${API_BASE_URL}/api/tools/${slug}`);
         if (!res.ok) throw new Error("Tool not found");
@@ -102,28 +97,32 @@ export default function DynamicToolPage() {
         setTool(data);
 
         const init: Record<string, any> = {};
-        Object.entries(data.settings || {}).forEach(([k, v]) => {
-          init[k] = v.default ?? "";
+        Object.entries(data.settings || {}).forEach(([k, def]) => {
+          init[k] = def.default ?? "";
         });
         setSettings(init);
       } catch (e: any) {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) setSchemaError(e?.message ?? "Load failed");
       } finally {
         if (!cancelled) setLoading(false);
       }
-    }
+    })();
 
-    load();
     return () => {
       cancelled = true;
     };
   }, [slug]);
 
-  /* ---------- File handling ---------- */
+  /* -------- helpers -------- */
 
-  const onFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const shouldShow = (key: string) => {
+    const def = tool?.settings?.[key];
+    if (!def?.visibleWhen) return true;
+    return settings[def.visibleWhen.field] === def.visibleWhen.equals;
+  };
+
+  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!tool) return;
-
     const picked = e.target.files ? Array.from(e.target.files) : [];
     if (!picked.length) return;
 
@@ -132,28 +131,24 @@ export default function DynamicToolPage() {
 
     if (!tool.allow_multiple) {
       setFiles([picked[0]]);
-    } else {
-      setFiles((prev) => {
-        const seen = new Set(prev.map(fileFingerprint));
-        const next = [...prev];
-        for (const f of picked) {
-          const fp = fileFingerprint(f);
-          if (!seen.has(fp)) {
-            seen.add(fp);
-            next.push(f);
-          }
-        }
-        return next;
-      });
+      if (inputRef.current) inputRef.current.value = "";
+      return;
     }
 
-    if (inputRef.current) inputRef.current.value = "";
-  };
+    setFiles((prev) => {
+      const seen = new Set(prev.map(fileFingerprint));
+      const next = [...prev];
+      picked.forEach((f) => {
+        const fp = fileFingerprint(f);
+        if (!seen.has(fp)) {
+          next.push(f);
+          seen.add(fp);
+        }
+      });
+      return next;
+    });
 
-  const removeFile = (idx: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== idx));
-    setStatus(null);
-    setStatusError(null);
+    if (inputRef.current) inputRef.current.value = "";
   };
 
   const moveFile = (from: number, to: number) => {
@@ -167,7 +162,7 @@ export default function DynamicToolPage() {
     });
   };
 
-  /* ---------- Conversion ---------- */
+  /* -------- start job -------- */
 
   const poll = async (jobId: string) => {
     while (true) {
@@ -176,12 +171,13 @@ export default function DynamicToolPage() {
       });
       const data: StatusResponse = await res.json();
       setStatus(data);
+
       if (data.status === "completed" || data.status === "failed") break;
       await new Promise((r) => setTimeout(r, 1500));
     }
   };
 
-  const start = async () => {
+  const startAction = async () => {
     if (!tool || !files.length) return;
 
     setWorking(true);
@@ -189,69 +185,64 @@ export default function DynamicToolPage() {
     setStatusError(null);
 
     try {
-      const keys: string[] = [];
+      const uploadedKeys: string[] = [];
 
-      for (const file of files) {
+      for (const f of files) {
         const up = await fetch(`${API_BASE_URL}/api/get-upload-url`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            file_name: file.name,
-            content_type: file.type || "application/octet-stream",
+            file_name: f.name,
+            content_type: f.type || "application/octet-stream",
           }),
         });
-        if (!up.ok) throw new Error("Upload URL failed");
         const { upload_url, key } = await up.json();
 
-        const put = await fetch(upload_url, {
+        await fetch(upload_url, {
           method: "PUT",
-          headers: { "Content-Type": file.type || "application/octet-stream" },
-          body: file,
+          headers: { "Content-Type": f.type || "application/octet-stream" },
+          body: f,
         });
-        if (!put.ok) throw new Error("Upload failed");
 
-        keys.push(key);
+        uploadedKeys.push(key);
       }
 
       const ext =
         files[0].name.split(".").pop()?.toLowerCase() ||
         tool.output_formats[0];
 
-      const finalSettings: Record<string, any> = { ...settings };
-      if (tool.allow_multiple) finalSettings.files = keys;
+      const finalSettings = { ...settings };
+      if (tool.allow_multiple) finalSettings.files = uploadedKeys;
 
       const res = await fetch(`${API_BASE_URL}/api/start-conversion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          s3_key: keys[0],
-          target_format: ext,
+          s3_key: uploadedKeys[0],
+          target_format: finalSettings.output_format || ext,
           tool_slug: tool.slug,
           settings: finalSettings,
         }),
       });
 
-      if (!res.ok) throw new Error(await res.text());
-
       const data = await res.json();
-      await poll(data.job_id ?? data.jobId);
+      await poll(data.job_id);
     } catch (e: any) {
-      setStatusError(e.message);
+      setStatusError(e?.message ?? "Failed");
     } finally {
       setWorking(false);
     }
   };
 
-  /* ---------- UI ---------- */
+  /* -------- UI -------- */
 
   if (loading) return <div className="p-8">Loading…</div>;
-  if (error) return <div className="p-8 text-red-600">{error}</div>;
-  if (!tool) return <div className="p-8 text-red-600">Tool not found</div>;
+  if (schemaError) return <div className="p-8 text-red-600">{schemaError}</div>;
+  if (!tool) return <div className="p-8">Tool not found</div>;
 
   const isMulti = !!tool.allow_multiple;
-  const isZip =
-    status?.file_url?.toLowerCase().includes(".zip") ||
-    status?.output_s3_key?.toLowerCase().endsWith(".zip");
+  const accept =
+    tool.input_formats.map((x) => `.${x.toLowerCase()}`).join(",") || undefined;
 
   const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
 
@@ -260,93 +251,108 @@ export default function DynamicToolPage() {
       <h1 className="text-3xl font-bold">{tool.name}</h1>
       <p className="text-slate-600">{tool.description}</p>
 
-      {/* Upload */}
+      {/* upload */}
       <section className="p-4 border rounded-xl space-y-3">
         <input
           ref={inputRef}
           type="file"
           multiple={isMulti}
-          accept={tool.input_formats.map((x) => `.${x}`).join(",")}
-          onChange={onFilesChange}
+          accept={accept}
+          onChange={handleFilesChange}
         />
 
-        {files.length > 0 && (
-          <ul className="space-y-2 text-sm">
-            {files.map((f, i) => (
-              <li
-                key={fileFingerprint(f)}
-                draggable={isMulti}
-                onDragStart={() => (dragFromRef.current = i)}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOver(i);
-                }}
-                onDrop={() => {
-                  if (dragFromRef.current !== null) {
-                    moveFile(dragFromRef.current, i);
-                  }
-                  dragFromRef.current = null;
-                  setDragOver(null);
-                }}
-                className={`flex items-center justify-between border rounded-md px-3 py-2 ${
-                  dragOver === i ? "bg-blue-50 border-blue-500" : ""
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  {isMulti && (
-                    <span className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-xs font-semibold">
-                      {i + 1}
-                    </span>
-                  )}
-                  <span className="truncate">{f.name}</span>
-                </div>
-                <button
-                  onClick={() => removeFile(i)}
-                  className="text-xs text-red-500"
-                >
-                  移除
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        {files.map((f, i) => (
+          <div
+            key={fileFingerprint(f)}
+            draggable={isMulti}
+            onDragStart={() => (dragIndexRef.current = i)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() =>
+              dragIndexRef.current !== null &&
+              moveFile(dragIndexRef.current, i)
+            }
+            className="border px-3 py-2 rounded-md flex justify-between"
+          >
+            <span>{f.name}</span>
+          </div>
+        ))}
       </section>
 
-      {/* Start */}
-      <section className="space-y-4">
+      {/* settings */}
+      <section className="p-4 border rounded-xl space-y-3">
+        {Object.entries(tool.settings).map(([key, def]) => {
+          if (!shouldShow(key)) return null;
+
+          if (def.type === "select") {
+            return (
+              <select
+                key={key}
+                className="border px-3 py-2 w-full"
+                value={settings[key]}
+                onChange={(e) =>
+                  setSettings((p) => ({ ...p, [key]: e.target.value }))
+                }
+              >
+                {def.options?.map((o) => (
+                  <option key={String(o.value)} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            );
+          }
+
+          if (def.type === "number") {
+            return (
+              <input
+                key={key}
+                type="number"
+                className="border px-3 py-2 w-full"
+                value={settings[key]}
+                onChange={(e) =>
+                  setSettings((p) => ({
+                    ...p,
+                    [key]: Number(e.target.value),
+                  }))
+                }
+              />
+            );
+          }
+
+          if (def.type === "boolean") {
+            return (
+              <label key={key} className="flex gap-2 items-center">
+                <input
+                  type="checkbox"
+                  checked={!!settings[key]}
+                  onChange={(e) =>
+                    setSettings((p) => ({
+                      ...p,
+                      [key]: e.target.checked,
+                    }))
+                  }
+                />
+                {def.label}
+              </label>
+            );
+          }
+
+          return null;
+        })}
+      </section>
+
+      {/* start */}
+      <section className="p-4 border rounded-xl space-y-4">
         <button
+          className="bg-blue-600 text-white px-5 py-2 rounded-lg"
           disabled={working || !files.length}
-          onClick={start}
-          className="bg-blue-600 text-white px-5 py-2 rounded-lg disabled:opacity-50"
+          onClick={startAction}
         >
           {working ? "處理中…" : actionLabel}
         </button>
 
         {statusError && <p className="text-red-600">{statusError}</p>}
-
-        {status && (
-          <div className="text-sm space-y-1">
-            <p>狀態：{status.status}</p>
-            <p>進度：{status.progress}%</p>
-            {status.message && <p>{status.message}</p>}
-            {status.status === "completed" && status.file_url && (
-              <>
-                {isZip && (
-                  <p className="text-xs text-slate-500">
-                    已打包為 ZIP，下載後解壓即可。
-                  </p>
-                )}
-                <a
-                  href={status.file_url}
-                  target="_blank"
-                  className="inline-block bg-slate-900 text-white px-4 py-2 rounded"
-                >
-                  下載結果
-                </a>
-              </>
-            )}
-          </div>
-        )}
+        {status && <p>{status.message}</p>}
       </section>
     </div>
   );

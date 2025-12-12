@@ -5,8 +5,6 @@ import { useParams } from "next/navigation";
 
 export const runtime = "edge";
 
-/* ---------------- types ---------------- */
-
 type ToolSettingOption = {
   value: string | number;
   label: string;
@@ -50,13 +48,9 @@ type StatusResponse = {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
 
-/* ---------------- utils ---------------- */
-
 function fileFingerprint(f: File) {
   return `${f.name}__${f.size}__${f.lastModified}`;
 }
-
-/* ---------------- page ---------------- */
 
 export default function DynamicToolPage() {
   const params = useParams();
@@ -65,31 +59,32 @@ export default function DynamicToolPage() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const dragIndexRef = useRef<number | null>(null);
 
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [tool, setTool] = useState<ToolSchema | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingSchema, setLoadingSchema] = useState(true);
   const [schemaError, setSchemaError] = useState<string | null>(null);
 
   const [files, setFiles] = useState<File[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
-  const [working, setWorking] = useState(false);
+  const [isWorking, setIsWorking] = useState(false);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
 
-  /* -------- load tool schema -------- */
-
+  /* ---------- load schema ---------- */
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
+    const fetchSchema = async () => {
       try {
-        setLoading(true);
+        setLoadingSchema(true);
         setSchemaError(null);
         setTool(null);
         setFiles([]);
         setStatus(null);
+        setStatusError(null);
 
         const res = await fetch(`${API_BASE_URL}/api/tools/${slug}`);
-        if (!res.ok) throw new Error("Tool not found");
+        if (!res.ok) throw new Error("Tool not found.");
 
         const data: ToolSchema = await res.json();
         if (cancelled) return;
@@ -102,21 +97,24 @@ export default function DynamicToolPage() {
         });
         setSettings(init);
       } catch (e: any) {
-        if (!cancelled) setSchemaError(e?.message ?? "Load failed");
+        if (!cancelled) setSchemaError(e?.message ?? "Failed to load tool");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoadingSchema(false);
       }
-    })();
+    };
 
+    fetchSchema();
     return () => {
       cancelled = true;
     };
   }, [slug]);
 
-  /* -------- helpers -------- */
+  /* ---------- helpers ---------- */
+  const handleSettingChange = (k: string, v: any) =>
+    setSettings((p) => ({ ...p, [k]: v }));
 
-  const shouldShow = (key: string) => {
-    const def = tool?.settings?.[key];
+  const shouldShow = (k: string) => {
+    const def = tool?.settings?.[k];
     if (!def?.visibleWhen) return true;
     return settings[def.visibleWhen.field] === def.visibleWhen.equals;
   };
@@ -138,18 +136,21 @@ export default function DynamicToolPage() {
     setFiles((prev) => {
       const seen = new Set(prev.map(fileFingerprint));
       const next = [...prev];
-      picked.forEach((f) => {
+      for (const f of picked) {
         const fp = fileFingerprint(f);
         if (!seen.has(fp)) {
           next.push(f);
           seen.add(fp);
         }
-      });
+      }
       return next;
     });
 
     if (inputRef.current) inputRef.current.value = "";
   };
+
+  const removeFile = (i: number) =>
+    setFiles((p) => p.filter((_, idx) => idx !== i));
 
   const moveFile = (from: number, to: number) => {
     if (from === to) return;
@@ -162,8 +163,7 @@ export default function DynamicToolPage() {
     });
   };
 
-  /* -------- start job -------- */
-
+  /* ---------- poll ---------- */
   const poll = async (jobId: string) => {
     while (true) {
       const res = await fetch(`${API_BASE_URL}/api/status/${jobId}`, {
@@ -177,10 +177,11 @@ export default function DynamicToolPage() {
     }
   };
 
+  /* ---------- start ---------- */
   const startAction = async () => {
     if (!tool || !files.length) return;
 
-    setWorking(true);
+    setIsWorking(true);
     setStatus(null);
     setStatusError(null);
 
@@ -197,163 +198,101 @@ export default function DynamicToolPage() {
           }),
         });
         const { upload_url, key } = await up.json();
-
         await fetch(upload_url, {
           method: "PUT",
           headers: { "Content-Type": f.type || "application/octet-stream" },
           body: f,
         });
-
         uploadedKeys.push(key);
       }
 
       const ext =
-        files[0].name.split(".").pop()?.toLowerCase() ||
-        tool.output_formats[0];
+        files[0]?.name.split(".").pop()?.toLowerCase() ?? "pdf";
 
-      const finalSettings = { ...settings };
-      if (tool.allow_multiple) finalSettings.files = uploadedKeys;
+      const finalSettings = {
+        ...settings,
+        ...(tool.allow_multiple ? { files: uploadedKeys } : {}),
+      };
 
-      const res = await fetch(`${API_BASE_URL}/api/start-conversion`, {
+      const startRes = await fetch(`${API_BASE_URL}/api/start-conversion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           s3_key: uploadedKeys[0],
-          target_format: finalSettings.output_format || ext,
+          target_format:
+            settings.output_format || tool.output_formats?.[0] || ext,
           tool_slug: tool.slug,
           settings: finalSettings,
         }),
       });
 
-      const data = await res.json();
-      await poll(data.job_id);
+      const startData = await startRes.json();
+      await poll(startData.job_id);
     } catch (e: any) {
       setStatusError(e?.message ?? "Failed");
     } finally {
-      setWorking(false);
+      setIsWorking(false);
     }
   };
 
-  /* -------- UI -------- */
-
-  if (loading) return <div className="p-8">Loading…</div>;
+  /* ---------- render ---------- */
+  if (loadingSchema) return <div className="p-8">Loading…</div>;
   if (schemaError) return <div className="p-8 text-red-600">{schemaError}</div>;
-  if (!tool) return <div className="p-8">Tool not found</div>;
+  if (!tool) return <div className="p-8 text-red-600">Tool not found</div>;
 
-  const isMulti = !!tool.allow_multiple;
-  const accept =
-    tool.input_formats.map((x) => `.${x.toLowerCase()}`).join(",") || undefined;
+  const isZipResult =
+    status &&
+    (status.file_url?.toLowerCase().includes(".zip") ||
+      status.output_s3_key?.toLowerCase().endsWith(".zip"));
 
   const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
 
   return (
     <div className="max-w-3xl mx-auto py-10 px-5 space-y-8">
       <h1 className="text-3xl font-bold">{tool.name}</h1>
-      <p className="text-slate-600">{tool.description}</p>
-
-      {/* upload */}
-      <section className="p-4 border rounded-xl space-y-3">
-        <input
-          ref={inputRef}
-          type="file"
-          multiple={isMulti}
-          accept={accept}
-          onChange={handleFilesChange}
-        />
-
-        {files.map((f, i) => (
-          <div
-            key={fileFingerprint(f)}
-            draggable={isMulti}
-            onDragStart={() => (dragIndexRef.current = i)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() =>
-              dragIndexRef.current !== null &&
-              moveFile(dragIndexRef.current, i)
-            }
-            className="border px-3 py-2 rounded-md flex justify-between"
-          >
-            <span>{f.name}</span>
-          </div>
-        ))}
-      </section>
-
-      {/* settings */}
-      <section className="p-4 border rounded-xl space-y-3">
-        {Object.entries(tool.settings).map(([key, def]) => {
-          if (!shouldShow(key)) return null;
-
-          if (def.type === "select") {
-            return (
-              <select
-                key={key}
-                className="border px-3 py-2 w-full"
-                value={settings[key]}
-                onChange={(e) =>
-                  setSettings((p) => ({ ...p, [key]: e.target.value }))
-                }
-              >
-                {def.options?.map((o) => (
-                  <option key={String(o.value)} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            );
-          }
-
-          if (def.type === "number") {
-            return (
-              <input
-                key={key}
-                type="number"
-                className="border px-3 py-2 w-full"
-                value={settings[key]}
-                onChange={(e) =>
-                  setSettings((p) => ({
-                    ...p,
-                    [key]: Number(e.target.value),
-                  }))
-                }
-              />
-            );
-          }
-
-          if (def.type === "boolean") {
-            return (
-              <label key={key} className="flex gap-2 items-center">
-                <input
-                  type="checkbox"
-                  checked={!!settings[key]}
-                  onChange={(e) =>
-                    setSettings((p) => ({
-                      ...p,
-                      [key]: e.target.checked,
-                    }))
-                  }
-                />
-                {def.label}
-              </label>
-            );
-          }
-
-          return null;
-        })}
-      </section>
 
       {/* start */}
-      <section className="p-4 border rounded-xl space-y-4">
-        <button
-          className="bg-blue-600 text-white px-5 py-2 rounded-lg"
-          disabled={working || !files.length}
-          onClick={startAction}
-        >
-          {working ? "處理中…" : actionLabel}
-        </button>
+      <button
+        disabled={isWorking || !files.length}
+        onClick={startAction}
+        className="bg-blue-600 text-white px-5 py-2 rounded-lg"
+      >
+        {isWorking ? "處理中…" : actionLabel}
+      </button>
 
-        {statusError && <p className="text-red-600">{statusError}</p>}
-        {status && <p>{status.message}</p>}
-      </section>
+      {status && (
+        <div className="text-sm space-y-2">
+          <div>狀態：{status.status}</div>
+          <div>進度：{status.progress}%</div>
+
+          {/* ✅ 修正後：download 永遠會出現 */}
+          {status.status === "completed" && (
+            <div className="space-y-2">
+              {isZipResult && (
+                <div className="text-xs text-slate-600">
+                  多個輸出已打包成 ZIP。
+                </div>
+              )}
+
+              {!status.file_url && (
+                <div className="text-xs text-slate-500">
+                  正在準備下載連結…
+                </div>
+              )}
+
+              {status.file_url && (
+                <a
+                  href={status.file_url}
+                  target="_blank"
+                  className="inline-block bg-slate-900 text-white px-4 py-2 rounded-lg"
+                >
+                  下載結果
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

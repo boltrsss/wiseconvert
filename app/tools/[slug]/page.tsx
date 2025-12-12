@@ -59,6 +59,10 @@ export default function DynamicToolPage() {
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // ✅ Drag & Drop（Hook-safe，無第三方套件）
+  const dragIndexRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
   const [tool, setTool] = useState<ToolSchema | null>(null);
   const [loadingSchema, setLoadingSchema] = useState(true);
   const [schemaError, setSchemaError] = useState<string | null>(null);
@@ -176,6 +180,18 @@ export default function DynamicToolPage() {
     if (inputRef.current) inputRef.current.value = "";
   };
 
+  // ✅ 拖曳排序：移動檔案（from -> to）
+  const moveFile = (from: number, to: number) => {
+    if (from === to) return;
+    setFiles((prev) => {
+      const next = [...prev];
+      const item = next[from];
+      next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  };
+
   const poll = async (jobId: string) => {
     let done = false;
     while (!done) {
@@ -202,7 +218,7 @@ export default function DynamicToolPage() {
     setStatusError(null);
 
     try {
-      // 1) 逐檔上傳到 S3，取得 keys
+      // 1) 逐檔上傳到 S3，取得 keys（順序 = 目前 files 順序，會影響合併順序）
       const uploadedKeys: string[] = [];
 
       for (const file of files) {
@@ -247,7 +263,7 @@ export default function DynamicToolPage() {
       const finalSettings: Record<string, any> = { ...settings };
 
       if (tool.allow_multiple) {
-        // ⚠️ 讓後端能合併/多檔處理：永遠提供 files（即使只有 1 個也提供）
+        // 多檔工具：永遠提供 files（即使只有 1 個也提供）
         finalSettings.files = uploadedKeys;
       }
 
@@ -296,9 +312,7 @@ export default function DynamicToolPage() {
       status.output_s3_key?.toLowerCase().endsWith(".zip"));
 
   const actionLabel =
-    tool.slug === "pdf-merge"
-      ? "開始合併"
-      : "開始"; // 你說「太麻煩也可通用開始」→ 我做通用開始
+    tool.slug === "pdf-merge" ? "開始合併" : "開始";
 
   return (
     <div className="max-w-3xl mx-auto py-10 px-5 space-y-8">
@@ -314,7 +328,7 @@ export default function DynamicToolPage() {
             <h2 className="font-semibold text-lg">
               1. 上傳檔案
               {isMulti && (
-                <span className="ml-2 text-xs text-slate-500">(可多選 / 可追加)</span>
+                <span className="ml-2 text-xs text-slate-500">(可多選 / 可追加 / 可拖曳排序)</span>
               )}
             </h2>
             <p className="text-xs text-slate-500 mt-1">
@@ -344,23 +358,62 @@ export default function DynamicToolPage() {
 
         {isMulti && (
           <div className="text-xs text-slate-500">
-            小提示：如果少選了檔案，直接再選一次會「追加」到清單，不會清空原本選取。
+            小提示：少選了檔案就再選一次會「追加」；要調整合併順序可直接拖曳清單排序。
           </div>
         )}
 
         {files.length > 0 && (
           <div className="mt-2 space-y-2 text-sm">
             <p className="font-medium">已選擇 {files.length} 個檔案：</p>
-            <ul className="space-y-1">
+
+            <ul className="space-y-2">
               {files.map((f, idx) => (
                 <li
                   key={fileFingerprint(f)}
-                  className="flex items-center justify-between border rounded-md px-2 py-1 bg-white"
+                  draggable={isMulti}
+                  onDragStart={() => {
+                    if (!isMulti) return;
+                    dragIndexRef.current = idx;
+                  }}
+                  onDragOver={(e) => {
+                    if (!isMulti) return;
+                    e.preventDefault();
+                    setDragOverIndex(idx);
+                  }}
+                  onDragLeave={() => {
+                    if (!isMulti) return;
+                    setDragOverIndex(null);
+                  }}
+                  onDrop={(e) => {
+                    if (!isMulti) return;
+                    e.preventDefault();
+                    if (dragIndexRef.current !== null) {
+                      moveFile(dragIndexRef.current, idx);
+                    }
+                    dragIndexRef.current = null;
+                    setDragOverIndex(null);
+                  }}
+                  className={`
+                    flex items-center justify-between
+                    border rounded-md px-3 py-2 bg-white
+                    transition
+                    ${isMulti ? "cursor-move" : "cursor-default"}
+                    ${
+                      dragOverIndex === idx
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-slate-200"
+                    }
+                  `}
+                  title={isMulti ? "拖曳以調整順序" : undefined}
                 >
-                  <span className="truncate mr-2">{f.name}</span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    {isMulti && <span className="text-slate-400 text-sm">☰</span>}
+                    <span className="truncate mr-2">{f.name}</span>
+                  </div>
+
                   <button
                     type="button"
-                    className="text-xs text-red-500 hover:underline"
+                    className="text-xs text-red-500 hover:underline shrink-0"
                     onClick={() => removeFile(idx)}
                   >
                     移除
@@ -368,6 +421,12 @@ export default function DynamicToolPage() {
                 </li>
               ))}
             </ul>
+
+            {isMulti && tool.slug === "pdf-merge" && files.length > 1 && (
+              <div className="text-xs text-slate-600">
+                合併順序會依照上面清單由上到下（可拖曳調整）。
+              </div>
+            )}
           </div>
         )}
       </section>

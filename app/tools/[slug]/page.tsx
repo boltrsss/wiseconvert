@@ -11,7 +11,7 @@ type ToolSettingOption = {
 };
 
 type ToolSetting = {
-  type: "select" | "number" | "boolean";
+  type: "select" | "number" | "boolean" | "text";
   label: string;
   options?: ToolSettingOption[];
   default?: any;
@@ -468,47 +468,60 @@ export default function DynamicToolPage() {
           if (!shouldShow(key)) return null;
 
           return (
-            <div key={key} className="space-y-1">
-              <label className="block text-sm font-medium">{def.label}</label>
+  <div key={key} className="space-y-1">
+    <label className="block text-sm font-medium">{def.label}</label>
+    {"description" in def && (def as any).description ? (
+      <p className="text-xs text-slate-500">{(def as any).description}</p>
+    ) : null}
 
-              {def.type === "select" && (
-                <select
-                  className="border rounded-md px-3 py-2 text-sm w-full"
-                  value={settings[key] ?? ""}
-                  onChange={(e) => handleSettingChange(key, e.target.value)}
-                >
-                  {def.options?.map((opt) => (
-                    <option key={String(opt.value)} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              )}
+    {def.type === "select" && (
+      <select
+        className="border rounded-md px-3 py-2 text-sm w-full"
+        value={settings[key] ?? ""}
+        onChange={(e) => handleSettingChange(key, e.target.value)}
+      >
+        {def.options?.map((opt) => (
+          <option key={String(opt.value)} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+    )}
 
-              {def.type === "number" && (
-                <input
-                  type="number"
-                  className="border rounded-md px-3 py-2 text-sm w-full"
-                  value={settings[key] ?? ""}
-                  min={def.min}
-                  max={def.max}
-                  step={def.step ?? 1}
-                  onChange={(e) => handleSettingChange(key, Number(e.target.value))}
-                />
-              )}
+    {def.type === "number" && (
+      <input
+        type="number"
+        className="border rounded-md px-3 py-2 text-sm w-full"
+        value={settings[key] ?? ""}
+        min={def.min}
+        max={def.max}
+        step={def.step ?? 1}
+        onChange={(e) => handleSettingChange(key, Number(e.target.value))}
+      />
+    )}
 
-              {def.type === "boolean" && (
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={!!settings[key]}
-                    onChange={(e) => handleSettingChange(key, e.target.checked)}
-                  />
-                  <span className="text-slate-700">Enable</span>
-                </label>
-              )}
-            </div>
-          );
+    {def.type === "text" && (
+      <input
+        type="text"
+        className="border rounded-md px-3 py-2 text-sm w-full"
+        value={settings[key] ?? ""}
+        onChange={(e) => handleSettingChange(key, e.target.value)}
+      />
+    )}
+
+    {def.type === "boolean" && (
+      <label className="inline-flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={!!settings[key]}
+          onChange={(e) => handleSettingChange(key, e.target.checked)}
+        />
+        <span className="text-slate-700">Enable</span>
+      </label>
+    )}
+  </div>
+);
+
         })}
       </section>
 

@@ -496,7 +496,11 @@ export default function DynamicToolPage() {
         min={def.min}
         max={def.max}
         step={def.step ?? 1}
-        onChange={(e) => handleSettingChange(key, Number(e.target.value))}
+        onChange={(e) => {
+        const v = e.target.value;
+        handleSettingChange(key, v === "" ? "" : Number(v));
+          }}
+
       />
     )}
 

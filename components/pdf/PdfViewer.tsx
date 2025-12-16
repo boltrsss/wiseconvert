@@ -38,6 +38,7 @@ export default function PdfViewer({ fileUrl }: Props) {
       await page.render({
         canvasContext: ctx,
         viewport,
+        canvas, 
       }).promise;
     };
 

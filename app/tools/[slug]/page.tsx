@@ -486,16 +486,30 @@ export default function DynamicToolPage() {
   <section className="p-4 border rounded-xl space-y-3">
     <h2 className="font-semibold text-lg">2. 裁切預覽</h2>
 
-    <div className="relative w-full overflow-auto">
-      <div className="relative inline-block">
-        <PdfViewer fileUrl={previewUrl} />
+    <div className="relative inline-block">
+      <PdfViewer
+        fileUrl={previewUrl}
+        onSize={(size) => {
+          setPdfSize(size);
+          if (!cropRect) {
+            setCropRect({
+              x: 0,
+              y: 0,
+              width: size.width,
+              height: size.height,
+            });
+          }
+        }}
+      />
 
+      {pdfSize && cropRect && (
         <PdfCropOverlay
-          onChange={(rect) => {
-            setCropRect(rect);
-          }}
+          pageWidth={pdfSize.width}
+          pageHeight={pdfSize.height}
+          value={cropRect}
+          onChange={(rect) => setCropRect(rect)}
         />
-      </div>
+      )}
     </div>
 
     <div className="text-xs text-slate-500">
@@ -504,7 +518,6 @@ export default function DynamicToolPage() {
   </section>
 )}
 
-      
 
             {/* Output format */}
       {tool.output_formats && tool.output_formats.length > 0 && (

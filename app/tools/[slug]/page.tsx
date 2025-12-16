@@ -83,6 +83,13 @@ export default function DynamicToolPage() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [pdfSize, setPdfSize] = useState<{ width: number; height: number } | null>(
+  null
+);
+  const [cropRect, setCropRect] = useState<Crop | null>(null);
+
+
   // 取得工具 schema（slug 改變才重置）
   useEffect(() => {
     let cancelled = false;

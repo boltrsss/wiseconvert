@@ -54,15 +54,6 @@ type Crop = {
   height: number;
 };
 
-const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-const [pdfSize, setPdfSize] = useState<{
-  width: number;
-  height: number;
-} | null>(null);
-
-const [cropRect, setCropRect] = useState<Crop | null>(null);
-
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
@@ -85,11 +76,7 @@ export default function DynamicToolPage() {
   const [tool, setTool] = useState<ToolSchema | null>(null);
   const [loadingSchema, setLoadingSchema] = useState(true);
   const [schemaError, setSchemaError] = useState<string | null>(null);
-
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [cropRect, setCropRect] = useState<any>(null);
-
-
+  
   const [files, setFiles] = useState<File[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [isWorking, setIsWorking] = useState(false);

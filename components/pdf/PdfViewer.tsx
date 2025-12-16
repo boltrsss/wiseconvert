@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import * as pdfjsLib from "pdfjs-dist/build/pdf";
+import * as pdfjsLib from "pdfjs-dist";
 
 // ⚠️ 關鍵：指定 worker 路徑（Cloudflare Pages 必須）
 pdfjsLib.GlobalWorkerOptions.workerSrc =

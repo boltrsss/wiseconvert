@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import PdfViewer from "@/components/pdf/PdfViewer";
+import PdfCropOverlay from "@/components/pdf/PdfCropOverlay";
 
 export const runtime = "edge";
 
@@ -67,6 +69,10 @@ export default function DynamicToolPage() {
   const [loadingSchema, setLoadingSchema] = useState(true);
   const [schemaError, setSchemaError] = useState<string | null>(null);
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [cropRect, setCropRect] = useState<any>(null);
+
+
   const [files, setFiles] = useState<File[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [isWorking, setIsWorking] = useState(false);
@@ -114,6 +120,33 @@ export default function DynamicToolPage() {
       cancelled = true;
     };
   }, [slug]);
+
+
+  //pdf-preview
+  useEffect(() => {
+  // 只在 pdf-crop 工具才需要 preview
+  if (tool?.slug !== "pdf-crop") {
+    setPreviewUrl(null);
+    setCropRect(null);
+    return;
+  }
+
+  const f = files[0];
+  if (!f) {
+    setPreviewUrl(null);
+    setCropRect(null);
+    return;
+  }
+
+  // ⭐ 這行就是「本機 preview」的核心
+  const url = URL.createObjectURL(f);
+  setPreviewUrl(url);
+
+  return () => {
+    URL.revokeObjectURL(url);
+  };
+}, [files, tool?.slug]);
+
 
   const handleSettingChange = (key: string, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -430,6 +463,31 @@ export default function DynamicToolPage() {
           </div>
         )}
       </section>
+
+{/* ✅ PDF Crop Preview */}
+{tool.slug === "pdf-crop" && previewUrl && (
+  <section className="p-4 border rounded-xl space-y-3">
+    <h2 className="font-semibold text-lg">2. 裁切預覽</h2>
+
+    <div className="relative w-full overflow-auto">
+      <div className="relative inline-block">
+        <PdfViewer fileUrl={previewUrl} />
+
+        <PdfCropOverlay
+          onChange={(rect) => {
+            setCropRect(rect);
+          }}
+        />
+      </div>
+    </div>
+
+    <div className="text-xs text-slate-500">
+      拖曳滑鼠選取裁切區域，完成後按「開始」才會真正裁切 PDF。
+    </div>
+  </section>
+)}
+
+      
 
             {/* Output format */}
       {tool.output_formats && tool.output_formats.length > 0 && (

@@ -98,12 +98,10 @@ const PdfViewer: React.FC<Props> = ({
     };
   }, [fileUrl, pageNumber, scale, onPageSize]);
 
- return (
-  <canvas
+  return <canvas
     ref={canvasRef}
     className="border rounded-md w-full block relative z-0"
   />;
-);
-
+};
 
 export default PdfViewer;

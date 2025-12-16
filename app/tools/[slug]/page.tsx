@@ -489,7 +489,7 @@ export default function DynamicToolPage() {
     <div className="relative inline-block">
       <PdfViewer
         fileUrl={previewUrl}
-        onSize={(size) => {
+        onPageSize={(size) => {
           setPdfSize(size);
           if (!cropRect) {
             setCropRect({

@@ -113,5 +113,7 @@ export default function PdfViewer({
     };
   }, [fileUrl, pageNumber, scale, onPageSize]);
 
-  return <canvas ref={canvasRef} className="border rounded-md block" />;
+  <canvas
+    ref={canvasRef}
+    className="border rounded-md block relative z-0"/>;
 }

@@ -50,10 +50,9 @@ type StatusResponse = {
 type Crop = {
   x: number;
   y: number;
-  width: number;
-  height: number;
+  w: number;
+  h: number;
 };
-
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
@@ -487,11 +486,12 @@ export default function DynamicToolPage() {
           setPdfSize(size);
           if (!cropRect) {
             setCropRect({
-              x: 0,
-              y: 0,
-              width: size.width,
-              height: size.height,
-            });
+            x: 0,
+            y: 0,
+            w: size.width,
+            h: size.height,
+          });
+
           }
         }}
       />

@@ -511,6 +511,61 @@ export default function DynamicToolPage() {
     <div className="text-xs text-slate-500">
       拖曳滑鼠選取裁切區域，完成後按「開始」才會真正裁切 PDF。
     </div>
+
+{cropRect && (
+  <div className="grid grid-cols-2 gap-3 text-sm">
+    <div>
+      <label className="block text-xs text-slate-500">X</label>
+      <input
+        type="number"
+        className="border rounded px-2 py-1 w-full"
+        value={cropRect.x}
+        onChange={(e) =>
+          setCropRect({ ...cropRect, x: Number(e.target.value) })
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-xs text-slate-500">Y</label>
+      <input
+        type="number"
+        className="border rounded px-2 py-1 w-full"
+        value={cropRect.y}
+        onChange={(e) =>
+          setCropRect({ ...cropRect, y: Number(e.target.value) })
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-xs text-slate-500">Width</label>
+      <input
+        type="number"
+        className="border rounded px-2 py-1 w-full"
+        value={cropRect.w}
+        onChange={(e) =>
+          setCropRect({ ...cropRect, w: Number(e.target.value) })
+        }
+      />
+    </div>
+
+    <div>
+      <label className="block text-xs text-slate-500">Height</label>
+      <input
+        type="number"
+        className="border rounded px-2 py-1 w-full"
+        value={cropRect.h}
+        onChange={(e) =>
+          setCropRect({ ...cropRect, h: Number(e.target.value) })
+        }
+      />
+    </div>
+  </div>
+)}
+
+
+    
   </section>
 )}
 

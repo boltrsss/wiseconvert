@@ -479,7 +479,9 @@ export default function DynamicToolPage() {
   <section className="p-4 border rounded-xl space-y-3">
     <h2 className="font-semibold text-lg">2. 裁切預覽</h2>
 
-    <div className="relative inline-block">
+   <div
+  className="relative inline-block overflow-auto border rounded-md"
+  style={{ maxHeight: "70vh", maxWidth: "100%" }}>
       <PdfViewer
         fileUrl={previewUrl}
         onPageSize={(size) => {

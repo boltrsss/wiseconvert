@@ -102,7 +102,7 @@ const PdfViewer: React.FC<Props> = ({
   <canvas
     ref={canvasRef}
     className="border rounded-md w-full block relative z-0"
-  />
+  />;
 );
 
 

@@ -19,11 +19,6 @@ type Props = {
   scale?: number;
 };
 
-onSize?.({
-  width: Math.floor(viewport.width),
-  height: Math.floor(viewport.height),
-});
-
 
 export default function PdfViewer({
   fileUrl,

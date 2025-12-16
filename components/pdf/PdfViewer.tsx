@@ -105,7 +105,7 @@ export default function PdfViewer({
         if (loadingTask?.destroy) loadingTask.destroy();
       } catch {}
     };
-  }, [fileUrl, pageNumber, scale, onPageSize]);
+  }, [fileUrl, pageNumber, scale]);
 
   return <canvas ref={canvasRef} className="border rounded-md w-full" />;
 }

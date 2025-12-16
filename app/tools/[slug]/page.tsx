@@ -11,13 +11,15 @@ type ToolSettingOption = {
 };
 
 type ToolSetting = {
-  type: "select" | "number" | "boolean" | "text";
+  type: "select" | "number" | "boolean" | "text"; // ✅ add text
   label: string;
+  description?: string; // ✅ add description
   options?: ToolSettingOption[];
   default?: any;
   min?: number;
   max?: number;
   step?: number;
+  placeholder?: string; // ✅ optional UX
   visibleWhen?: {
     field: string;
     equals: any;
@@ -48,7 +50,6 @@ type StatusResponse = {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
 
-// 用於去重（避免使用者重複選到同一個檔案造成清單爆炸）
 function fileFingerprint(f: File) {
   return `${f.name}__${f.size}__${f.lastModified}`;
 }
@@ -59,7 +60,6 @@ export default function DynamicToolPage() {
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // ✅ Drag & Drop（Hook-safe，無第三方套件）
   const dragIndexRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
@@ -73,7 +73,6 @@ export default function DynamicToolPage() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
 
-  // 取得工具 schema（slug 改變才重置）
   useEffect(() => {
     let cancelled = false;
 
@@ -94,7 +93,6 @@ export default function DynamicToolPage() {
 
         setTool(data);
 
-        // 初始化設定值
         const init: Record<string, any> = {};
         Object.entries(data.settings || {}).forEach(([key, def]) => {
           init[key] = def.default ?? "";
@@ -127,7 +125,6 @@ export default function DynamicToolPage() {
     return settings[target] === expected;
   };
 
-  // ✅ 多檔工具：再選檔「追加」而不是覆蓋（且去重）
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!tool) return;
 
@@ -137,15 +134,12 @@ export default function DynamicToolPage() {
     setStatus(null);
     setStatusError(null);
 
-    // 單檔工具：直接取第一個（覆蓋）
     if (!tool.allow_multiple) {
       setFiles([picked[0]]);
-      // 允許下一次選到同一個檔也能觸發 onChange
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
 
-    // 多檔工具：追加 + 去重
     setFiles((prev) => {
       const seen = new Set(prev.map(fileFingerprint));
       const next = [...prev];
@@ -159,7 +153,6 @@ export default function DynamicToolPage() {
       return next;
     });
 
-    // 允許下一次選到同一個檔也能觸發 onChange
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -180,7 +173,6 @@ export default function DynamicToolPage() {
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  // ✅ 拖曳排序：移動檔案（from -> to）
   const moveFile = (from: number, to: number) => {
     if (from === to) return;
     setFiles((prev) => {
@@ -218,7 +210,6 @@ export default function DynamicToolPage() {
     setStatusError(null);
 
     try {
-      // 1) 逐檔上傳到 S3，取得 keys（順序 = 目前 files 順序，會影響合併順序）
       const uploadedKeys: string[] = [];
 
       for (const file of files) {
@@ -247,7 +238,6 @@ export default function DynamicToolPage() {
 
       if (!uploadedKeys.length) throw new Error("No files uploaded");
 
-      // 2) output_format（通用）
       const firstFile = files[0];
       const extFromName =
         firstFile?.name.includes(".") &&
@@ -259,20 +249,17 @@ export default function DynamicToolPage() {
         extFromName ||
         "pdf";
 
-      // 3) settings（多檔工具帶 files）
       const finalSettings: Record<string, any> = { ...settings };
 
       if (tool.allow_multiple) {
-        // 多檔工具：永遠提供 files（即使只有 1 個也提供）
         finalSettings.files = uploadedKeys;
       }
 
-      // 4) start
       const startRes = await fetch(`${API_BASE_URL}/api/start-conversion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          s3_key: uploadedKeys[0], // 主檔（或第一個）
+          s3_key: uploadedKeys[0],
           target_format: outputFormat,
           tool_slug: tool.slug,
           settings: finalSettings,
@@ -296,8 +283,6 @@ export default function DynamicToolPage() {
     }
   };
 
-  // ------------------ UI ------------------
-
   if (loadingSchema) return <div className="p-8">Loading…</div>;
   if (schemaError) return <div className="p-8 text-red-600">{schemaError}</div>;
   if (!tool) return <div className="p-8 text-red-600">Tool not found</div>;
@@ -311,8 +296,7 @@ export default function DynamicToolPage() {
     (status.file_url?.toLowerCase().includes(".zip") ||
       status.output_s3_key?.toLowerCase().endsWith(".zip"));
 
-  const actionLabel =
-    tool.slug === "pdf-merge" ? "開始合併" : "開始";
+  const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
 
   return (
     <div className="max-w-3xl mx-auto py-10 px-5 space-y-8">
@@ -328,7 +312,9 @@ export default function DynamicToolPage() {
             <h2 className="font-semibold text-lg">
               1. 上傳檔案
               {isMulti && (
-                <span className="ml-2 text-xs text-slate-500">(可多選 / 可追加 / 可拖曳排序)</span>
+                <span className="ml-2 text-xs text-slate-500">
+                  (可多選 / 可追加 / 可拖曳排序)
+                </span>
               )}
             </h2>
             <p className="text-xs text-slate-500 mt-1">
@@ -358,7 +344,7 @@ export default function DynamicToolPage() {
 
         {isMulti && (
           <div className="text-xs text-slate-500">
-            小提示：少選了檔案就再選一次會「追加」；要調整合併順序可直接拖曳清單排序。
+            小提示：少選了檔案就再選一次會「追加」；要調整順序可直接拖曳清單排序。
           </div>
         )}
 
@@ -431,7 +417,7 @@ export default function DynamicToolPage() {
         )}
       </section>
 
-            {/* Output format */}
+      {/* Output format */}
       {tool.output_formats && tool.output_formats.length > 0 && (
         <section className="p-4 border rounded-xl space-y-3">
           <h2 className="font-semibold text-lg">2. 輸出格式</h2>
@@ -439,9 +425,7 @@ export default function DynamicToolPage() {
           <select
             className="border rounded-md px-3 py-2 text-sm w-full"
             value={settings.output_format ?? tool.output_formats[0]}
-            onChange={(e) =>
-              handleSettingChange("output_format", e.target.value)
-            }
+            onChange={(e) => handleSettingChange("output_format", e.target.value)}
           >
             {tool.output_formats.map((fmt) => (
               <option key={fmt} value={fmt}>
@@ -450,9 +434,7 @@ export default function DynamicToolPage() {
             ))}
           </select>
 
-          <p className="text-xs text-slate-500">
-            選擇轉換後的輸出格式
-          </p>
+          <p className="text-xs text-slate-500">選擇轉換後的輸出格式</p>
         </section>
       )}
 
@@ -468,64 +450,66 @@ export default function DynamicToolPage() {
           if (!shouldShow(key)) return null;
 
           return (
-  <div key={key} className="space-y-1">
-    <label className="block text-sm font-medium">{def.label}</label>
-    {"description" in def && (def as any).description ? (
-      <p className="text-xs text-slate-500">{(def as any).description}</p>
-    ) : null}
+            <div key={key} className="space-y-1">
+              <label className="block text-sm font-medium">{def.label}</label>
 
-    {def.type === "select" && (
-      <select
-        className="border rounded-md px-3 py-2 text-sm w-full"
-        value={settings[key] ?? ""}
-        onChange={(e) => handleSettingChange(key, e.target.value)}
-      >
-        {def.options?.map((opt) => (
-          <option key={String(opt.value)} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    )}
+              {/* ✅ NEW: description */}
+              {def.description && (
+                <p className="text-xs text-slate-500">{def.description}</p>
+              )}
 
-    {def.type === "number" && (
-      <input
-        type="number"
-        className="border rounded-md px-3 py-2 text-sm w-full"
-        value={settings[key] ?? ""}
-        min={def.min}
-        max={def.max}
-        step={def.step ?? 1}
-        onChange={(e) => {
-        const v = e.target.value;
-        handleSettingChange(key, v === "" ? "" : Number(v));
-          }}
+              {def.type === "select" && (
+                <select
+                  className="border rounded-md px-3 py-2 text-sm w-full"
+                  value={settings[key] ?? ""}
+                  onChange={(e) => handleSettingChange(key, e.target.value)}
+                >
+                  {def.options?.map((opt) => (
+                    <option key={String(opt.value)} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              )}
 
-      />
-    )}
+              {def.type === "number" && (
+                <input
+                  type="number"
+                  className="border rounded-md px-3 py-2 text-sm w-full"
+                  value={settings[key] ?? ""}
+                  min={def.min}
+                  max={def.max}
+                  step={def.step ?? 1}
+                  placeholder={def.placeholder}
+                  onChange={(e) =>
+                    handleSettingChange(key, Number(e.target.value))
+                  }
+                />
+              )}
 
-    {def.type === "text" && (
-      <input
-        type="text"
-        className="border rounded-md px-3 py-2 text-sm w-full"
-        value={settings[key] ?? ""}
-        onChange={(e) => handleSettingChange(key, e.target.value)}
-      />
-    )}
+              {/* ✅ NEW: text input */}
+              {def.type === "text" && (
+                <input
+                  type="text"
+                  className="border rounded-md px-3 py-2 text-sm w-full"
+                  value={settings[key] ?? ""}
+                  placeholder={def.placeholder}
+                  onChange={(e) => handleSettingChange(key, e.target.value)}
+                />
+              )}
 
-    {def.type === "boolean" && (
-      <label className="inline-flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={!!settings[key]}
-          onChange={(e) => handleSettingChange(key, e.target.checked)}
-        />
-        <span className="text-slate-700">Enable</span>
-      </label>
-    )}
-  </div>
-);
-
+              {def.type === "boolean" && (
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!settings[key]}
+                    onChange={(e) => handleSettingChange(key, e.target.checked)}
+                  />
+                  <span className="text-slate-700">Enable</span>
+                </label>
+              )}
+            </div>
+          );
         })}
       </section>
 

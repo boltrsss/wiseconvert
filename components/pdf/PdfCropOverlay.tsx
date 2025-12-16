@@ -46,6 +46,31 @@ export default function PdfCropOverlay({
     setStart({ x: e.clientX, y: e.clientY });
   };
 
+
+  const clampRect = (
+  r: { x: number; y: number; w: number; h: number },
+  pageW: number,
+  pageH: number,
+  minW = 20,
+  minH = 20
+) => {
+  let x = r.x;
+  let y = r.y;
+  let w = Math.max(minW, r.w);
+  let h = Math.max(minH, r.h);
+
+  // 先確保 w/h 不超出頁面
+  w = Math.min(w, pageW);
+  h = Math.min(h, pageH);
+
+  // 再 clamp x/y，確保整個框都在頁內
+  x = Math.max(0, Math.min(pageW - w, x));
+  y = Math.max(0, Math.min(pageH - h, y));
+
+  return { x, y, w, h };
+};
+
+
   const onMouseUp = () => {
     setDragging(false);
     setStart(null);

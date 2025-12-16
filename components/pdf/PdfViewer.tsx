@@ -107,5 +107,5 @@ export default function PdfViewer({
     };
   }, [fileUrl, pageNumber, scale]);
 
-  return <canvas ref={canvasRef} className="border rounded-md w-full" />;
+  return <canvas ref={canvasRef} className="border rounded-md block" />;
 }

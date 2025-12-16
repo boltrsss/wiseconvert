@@ -47,6 +47,23 @@ type StatusResponse = {
   raw?: Record<string, any> | null;
 };
 
+type Crop = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+const [pdfSize, setPdfSize] = useState<{
+  width: number;
+  height: number;
+} | null>(null);
+
+const [cropRect, setCropRect] = useState<Crop | null>(null);
+
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
 

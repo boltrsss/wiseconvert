@@ -19,7 +19,6 @@ type Props = {
   scale?: number;
 };
 
-
 export default function PdfViewer({
   fileUrl,
   onPageSize,
@@ -41,6 +40,11 @@ export default function PdfViewer({
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
+
+        // ✅ 若上一輪還在 render，先取消（避免縮放/切頁快速操作出現競態）
+        try {
+          if (renderTask?.cancel) renderTask.cancel();
+        } catch {}
 
         // ✅ 載入 PDF
         loadingTask = pdfjsLib.getDocument({
@@ -89,7 +93,9 @@ export default function PdfViewer({
 
         await renderTask.promise;
       } catch (err) {
-        console.error("[PdfViewer] render error:", err);
+        if (!cancelled) {
+          console.error("[PdfViewer] render error:", err);
+        }
       }
     };
 
@@ -105,7 +111,7 @@ export default function PdfViewer({
         if (loadingTask?.destroy) loadingTask.destroy();
       } catch {}
     };
-  }, [fileUrl, pageNumber, scale]);
+  }, [fileUrl, pageNumber, scale, onPageSize]);
 
   return <canvas ref={canvasRef} className="border rounded-md block" />;
 }

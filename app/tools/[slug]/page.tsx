@@ -182,8 +182,8 @@ export default function DynamicToolPage() {
   if (prev) return prev;
 
   // 初始框：70%（mobile 也好抓）
-  const w = Math.round(size.width * 0.7);
-  const h = Math.round(size.height * 0.7);
+  const w = Math.round(size.width * 0.5);
+  const h = Math.round(size.height * 0.5);
 
   // 置中
   const x = Math.round((size.width - w) / 2);

@@ -87,6 +87,10 @@ export default function DynamicToolPage() {
   null
 );
   const [cropRect, setCropRect] = useState<Crop | null>(null);
+  const [pdfScale, setPdfScale] = useState(1.0);
+  const lastScaleRef = useRef(1.0);
+  const cropWrapRef = useRef<HTMLDivElement | null>(null);
+
 
 
   // 取得工具 schema（slug 改變才重置）
@@ -172,28 +176,43 @@ export default function DynamicToolPage() {
 
 
   //pdf-fixcode
-  const handlePdfPageSize = React.useCallback(
+    const handlePdfPageSize = React.useCallback(
   (size: { width: number; height: number; scale: number }) => {
     setPdfSize({ width: size.width, height: size.height });
+    setPdfScale(size.scale);
 
-    // ✅ 第一次初始化 cropRect：不要全頁，先給 70% 並置中（手機才看得到邊界）
-  setCropRect((prev) => {
-  // 已經有框（使用者拖過 / resize 過）就不要再動
-  if (prev) return prev;
+    // ✅ scale 改變時，裁切框等比例縮放（FreeConvert 行為）
+    const prevScale = lastScaleRef.current;
+    const nextScale = size.scale;
+    const ratio = prevScale ? nextScale / prevScale : 1;
 
-  // 初始框：70%（mobile 也好抓）
-  const w = Math.round(size.width * 0.5);
-  const h = Math.round(size.height * 0.5);
+    if (ratio !== 1) {
+      setCropRect((prev) => {
+        if (!prev) return prev;
+        return {
+          x: Math.round(prev.x * ratio),
+          y: Math.round(prev.y * ratio),
+          w: Math.round(prev.w * ratio),
+          h: Math.round(prev.h * ratio),
+        };
+      });
+    }
 
-  // 置中
-  const x = Math.round((size.width - w) / 2);
-  const y = Math.round((size.height - h) / 2);
+    lastScaleRef.current = nextScale;
 
-  return { x, y, w, h };
+    // ✅ 第一次初始化 cropRect（只做一次）
+    setCropRect((prev) => {
+      if (prev) return prev;
+      const w = Math.round(size.width * 0.5);
+      const h = Math.round(size.height * 0.5);
+      const x = Math.round((size.width - w) / 2);
+      const y = Math.round((size.height - h) / 2);
+      return { x, y, w, h };
     });
   },
   []
 );
+
 
   
   // ✅ 多檔工具：再選檔「追加」而不是覆蓋（且去重）
@@ -334,7 +353,7 @@ export default function DynamicToolPage() {
       // ✅ pdf-crop：把 UI 選的裁切框送到後端
 if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
   finalSettings.crop = cropRect; // {x,y,w,h}（CSS px 座標）
-  finalSettings.page = { width: pdfSize.width, height: pdfSize.height };
+  finalSettings.page = { width: pdfSize.width, height: pdfSize.height, scale: pdfScale };
 }
 
       if (tool.allow_multiple) {

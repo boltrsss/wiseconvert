@@ -412,7 +412,7 @@ export default function DynamicToolPage() {
 
   const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
   return (
-    <div className="max-w-[1200px] mx-auto py-10 px-5 space-y-8">
+    <div className="max-w-6xl mx-auto py-10 px-5 space-y-8">
       <header>
         <h1 className="text-3xl font-bold">{tool.name}</h1>
         <p className="text-slate-600 mt-2">{tool.description}</p>

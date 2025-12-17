@@ -349,22 +349,25 @@ export default function DynamicToolPage() {
 
       // ✅ pdf-crop：把 UI 選的裁切框送到後端
 if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
-  finalSettings.crop = cropRect; // {x,y,w,h}（CSS px 座標）
+  finalSettings.crop = cropRect; // {x,y,w,h} (CSS px)
   finalSettings.page = { width: pdfSize.width, height: pdfSize.height, scale: pdfScale };
-  // === B) NEW: normalized crop (0~1) ===
-      const crop_norm = {
-        x: crop.x / page.width,
-        y: crop.y / page.height,
-        w: crop.w / page.width,
-        h: crop.h / page.height,
-      };
 
-      finalSettings.crop_norm = crop_norm;
+  // ✅ B) normalized crop (0~1) — 用現有 cropRect/pdfSize，不要用 crop/page
+  const pw = Number(pdfSize.width) || 1;
+  const ph = Number(pdfSize.height) || 1;
 
-      // 套用方式（先這樣就好）
-      finalSettings.apply_to = "all";      // or "current"
-      finalSettings.page_index = activePageIndex ?? 0;
-      }
+  finalSettings.crop_norm = {
+    x: cropRect.x / pw,
+    y: cropRect.y / ph,
+    w: cropRect.w / pw,
+    h: cropRect.h / ph,
+  };
+
+  // （先固定，之後你要做多頁再接 UI）
+  finalSettings.page_index = 0;
+  finalSettings.apply_to = "all";
+}
+
 
       if (tool.allow_multiple) {
         // 多檔工具：永遠提供 files（即使只有 1 個也提供）

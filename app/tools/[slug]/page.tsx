@@ -352,20 +352,19 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
   finalSettings.crop = cropRect; // {x,y,w,h}（CSS px 座標）
   finalSettings.page = { width: pdfSize.width, height: pdfSize.height, scale: pdfScale };
   // === B) NEW: normalized crop (0~1) ===
-const crop_norm = {
-  x: crop.x / page.width,
-  y: crop.y / page.height,
-  w: crop.w / page.width,
-  h: crop.h / page.height,
-};
+      const crop_norm = {
+        x: crop.x / page.width,
+        y: crop.y / page.height,
+        w: crop.w / page.width,
+        h: crop.h / page.height,
+      };
 
-finalSettings.crop_norm = crop_norm;
+      finalSettings.crop_norm = crop_norm;
 
-// 套用方式（先這樣就好）
-finalSettings.apply_to = "all";      // or "current"
-finalSettings.page_index = activePageIndex ?? 0;
-
-}
+      // 套用方式（先這樣就好）
+      finalSettings.apply_to = "all";      // or "current"
+      finalSettings.page_index = activePageIndex ?? 0;
+      }
 
       if (tool.allow_multiple) {
         // 多檔工具：永遠提供 files（即使只有 1 個也提供）

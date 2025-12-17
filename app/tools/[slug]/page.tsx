@@ -92,7 +92,7 @@ export default function DynamicToolPage() {
   const [pageCount, setPageCount] = useState(1);
   const [applyTo, setApplyTo] = useState<"all" | "first">("all");
     // thumbnails
-  const THUMB_WIDTH = 150;
+  const THUMB_WIDTH = 110;
   const THUMB_MAX = 40; // 太多頁先限制，避免一次渲染爆炸
 
   // 取得工具 schema（slug 改變才重置）

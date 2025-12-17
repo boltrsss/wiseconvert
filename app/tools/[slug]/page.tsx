@@ -195,6 +195,31 @@ export default function DynamicToolPage() {
   []
 );
 
+  //pdf-add-xyz-sync
+
+  {tool.slug === "pdf-crop" && cropRect && (
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+    {(["x", "y", "w", "h"] as const).map((k) => (
+      <label key={k} className="space-y-1">
+        <div className="text-xs text-slate-600 uppercase">{k}</div>
+        <input
+          type="number"
+          className="border rounded-md px-2 py-1 w-full"
+          value={cropRect[k]}
+          onChange={(e) => {
+            const v = Number(e.target.value || 0);
+            setCropRect((prev) => {
+              if (!prev) return prev;
+              const next = { ...prev, [k]: v };
+              // ✅ 你也可以在這裡 clamp（用同一套 clampRect）
+              return next as any;
+            });
+          }}
+        />
+      </label>
+    ))}
+  </div>
+)}
 
   
   // ✅ 多檔工具：再選檔「追加」而不是覆蓋（且去重）

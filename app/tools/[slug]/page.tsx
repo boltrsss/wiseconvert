@@ -92,7 +92,7 @@ export default function DynamicToolPage() {
   const [pageCount, setPageCount] = useState(1);
   const [applyTo, setApplyTo] = useState<"all" | "first">("all");
     // thumbnails
-  const THUMB_WIDTH = 110;
+  const THUMB_WIDTH = 150;
   const THUMB_MAX = 40; // 太多頁先限制，避免一次渲染爆炸
 
   // 取得工具 schema（slug 改變才重置）
@@ -657,7 +657,7 @@ export default function DynamicToolPage() {
     {/* ✅ 左側縮圖 + 右側主畫布 */}
     <div className="flex flex-col md:flex-row gap-3">
       {/* Thumbnails */}
-      <div className="md:w-[130px] md:shrink-0 w-full">
+      <div className="md:w-[200px] md:shrink-0 w-full">
         <div className="text-xs text-slate-500 mb-2">Pages</div>
 
         <div

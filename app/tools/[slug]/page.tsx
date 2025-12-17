@@ -411,7 +411,6 @@ export default function DynamicToolPage() {
       status.output_s3_key?.toLowerCase().endsWith(".zip"));
 
   const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
-
   return (
     <div className="max-w-[1200px] mx-auto py-10 px-5 space-y-8">
       <header>

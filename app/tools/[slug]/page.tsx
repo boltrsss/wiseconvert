@@ -652,57 +652,62 @@ export default function DynamicToolPage() {
           </div>
 
           {/* ✅ 左側縮圖 + 右側主畫布 */}
-          <div className="flex gap-3">
+          <div className="flex flex-col md:flex-row gap-3">
             {/* Thumbnails */}
-            <div className="w-[130px] shrink-0">
-              <div className="text-xs text-slate-500 mb-2">Pages</div>
+<div className="md:w-[130px] md:shrink-0 w-full">
+  <div className="text-xs text-slate-500 mb-2">Pages</div>
 
-              <div
-                className="border rounded-md bg-white overflow-auto"
-                style={{ maxHeight: "70vh" }}
-              >
-                <div className="p-2 space-y-2">
-                  {Array.from({ length: Math.min(pageCount, THUMB_MAX) }).map((_, i) => {
-                    const active = i === pageIndex;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setPageIndex(i)}
-                        className={`
-                          w-full text-left rounded-md border p-1 bg-white
-                          hover:bg-slate-50 transition
-                          ${active ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200"}
-                        `}
-                        title={`Page ${i + 1}`}
-                      >
-                        <div className="flex items-center justify-between px-1 pb-1">
-                          <span className={`text-xs ${active ? "text-blue-700" : "text-slate-600"}`}>
-                            {i + 1}
-                          </span>
-                        </div>
-
-                        {/* ✅ 縮圖 canvas（靠 PdfViewer 的 thumbnail mode） */}
-                        <div className="flex justify-center">
-                          <PdfViewer
-                            fileUrl={previewUrl}
-                            pageIndex={i}
-                            mode="thumbnail"
-                            thumbWidth={THUMB_WIDTH}
-                          />
-                        </div>
-                      </button>
-                    );
-                  })}
-
-                  {pageCount > THUMB_MAX && (
-                    <div className="text-[11px] text-slate-500 px-1 pt-1">
-                      只顯示前 {THUMB_MAX} 頁（共 {pageCount} 頁）
-                    </div>
-                  )}
-                </div>
-              </div>
+  <div
+    className="
+      border rounded-md bg-white
+      overflow-x-auto overflow-y-hidden md:overflow-y-auto md:overflow-x-hidden
+    "
+    style={{ maxHeight: "70vh" }}
+  >
+    {/* ✅ mobile: 橫向; desktop: 直向 */}
+    <div className="p-2 flex md:block gap-2 md:space-y-2">
+      {Array.from({ length: Math.min(pageCount, THUMB_MAX) }).map((_, i) => {
+        const active = i === pageIndex;
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setPageIndex(i)}
+            className={`
+              shrink-0 md:w-full w-[120px]
+              text-left rounded-md border p-1 bg-white
+              hover:bg-slate-50 transition
+              ${active ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200"}
+            `}
+            title={`Page ${i + 1}`}
+          >
+            <div className="flex items-center justify-between px-1 pb-1">
+              <span className={`text-xs ${active ? "text-blue-700" : "text-slate-600"}`}>
+                {i + 1}
+              </span>
             </div>
+
+            <div className="flex justify-center">
+              <PdfViewer
+                fileUrl={previewUrl}
+                pageIndex={i}
+                mode="thumbnail"
+                thumbWidth={THUMB_WIDTH}
+              />
+            </div>
+          </button>
+        );
+      })}
+
+      {pageCount > THUMB_MAX && (
+        <div className="text-[11px] text-slate-500 px-1 pt-1">
+          只顯示前 {THUMB_MAX} 頁（共 {pageCount} 頁）
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+
 
             {/* Main canvas */}
             <div className="flex-1 min-w-0">

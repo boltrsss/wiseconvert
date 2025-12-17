@@ -533,25 +533,80 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
       </div>
     </div>
 
-    // page.tsx 內，DynamicToolPage() 裡面加一個 clamp（就放在 component 內任何地方都行）
-const clampRect = (
-  r: { x: number; y: number; w: number; h: number },
-  pageW: number,
-  pageH: number,
-  minW = 20,
-  minH = 20
-) => {
-  let w = Math.max(minW, r.w);
-  let h = Math.max(minH, r.h);
+          {/* ✅ 連動數值面板（放在 section 內、提示文字上方） */}
+{tool.slug === "pdf-crop" && previewUrl && pdfSize && cropRect && (
+  <div className="mt-3 grid grid-cols-2 gap-3">
+    <div className="space-y-1">
+      <label className="text-xs text-slate-600">X</label>
+      <input
+        type="number"
+        className="border rounded-md px-3 py-2 text-sm w-full"
+        value={Math.round(cropRect.x)}
+        onChange={(e) => {
+          const x = Number(e.target.value || 0);
+          setCropRect((prev) =>
+            prev
+              ? { ...prev, x: Math.max(0, Math.min(pdfSize.width - prev.w, x)) }
+              : prev
+          );
+        }}
+      />
+    </div>
 
-  w = Math.min(w, pageW);
-  h = Math.min(h, pageH);
+    <div className="space-y-1">
+      <label className="text-xs text-slate-600">Y</label>
+      <input
+        type="number"
+        className="border rounded-md px-3 py-2 text-sm w-full"
+        value={Math.round(cropRect.y)}
+        onChange={(e) => {
+          const y = Number(e.target.value || 0);
+          setCropRect((prev) =>
+            prev
+              ? { ...prev, y: Math.max(0, Math.min(pdfSize.height - prev.h, y)) }
+              : prev
+          );
+        }}
+      />
+    </div>
 
-  let x = Math.max(0, Math.min(pageW - w, r.x));
-  let y = Math.max(0, Math.min(pageH - h, r.y));
+    <div className="space-y-1">
+      <label className="text-xs text-slate-600">W</label>
+      <input
+        type="number"
+        className="border rounded-md px-3 py-2 text-sm w-full"
+        value={Math.round(cropRect.w)}
+        onChange={(e) => {
+          const w = Number(e.target.value || 0);
+          setCropRect((prev) => {
+            if (!prev) return prev;
+            const ww = Math.max(40, Math.min(pdfSize.width, w));
+            const xx = Math.max(0, Math.min(pdfSize.width - ww, prev.x));
+            return { ...prev, x: xx, w: ww };
+          });
+        }}
+      />
+    </div>
 
-  return { x, y, w, h };
-};
+    <div className="space-y-1">
+      <label className="text-xs text-slate-600">H</label>
+      <input
+        type="number"
+        className="border rounded-md px-3 py-2 text-sm w-full"
+        value={Math.round(cropRect.h)}
+        onChange={(e) => {
+          const h = Number(e.target.value || 0);
+          setCropRect((prev) => {
+            if (!prev) return prev;
+            const hh = Math.max(40, Math.min(pdfSize.height, h));
+            const yy = Math.max(0, Math.min(pdfSize.height - hh, prev.y));
+            return { ...prev, y: yy, h: hh };
+          });
+        }}
+      />
+    </div>
+  </div>
+)}
 
 
     <div className="text-xs text-slate-500">

@@ -7,24 +7,41 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 type Props = {
   fileUrl: string;
-  onPageSize?: (size: { width: number; height: number; scale: number }) => void;
+
+  // ✅ 新增：用 0-based pageIndex（page.tsx 會傳這個）
+  pageIndex?: number;
+
+  // ✅ 兼容舊用法：如果外面仍用 pageNumber（1-based）
   pageNumber?: number;
+
+  // ✅ 新增：回報總頁數
+  onPageCount?: (pageCount: number) => void;
+
+  onPageSize?: (size: { width: number; height: number; scale: number }) => void;
   scale?: number;
 };
 
 export default function PdfViewer({
   fileUrl,
   onPageSize,
+  onPageCount,
+  pageIndex,
   pageNumber = 1,
   scale = 1.2,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // ✅ 用 ref 保存 callback，避免 callback 變動觸發重新 render/cancel
+  // ✅ 用 ref 保存 callbacks
   const onPageSizeRef = useRef<Props["onPageSize"]>(onPageSize);
+  const onPageCountRef = useRef<Props["onPageCount"]>(onPageCount);
+
   useEffect(() => {
     onPageSizeRef.current = onPageSize;
   }, [onPageSize]);
+
+  useEffect(() => {
+    onPageCountRef.current = onPageCount;
+  }, [onPageCount]);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +56,7 @@ export default function PdfViewer({
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        // ✅ 取消上一個 render（避免疊加 & RenderingCancelledException 刷屏）
+        // ✅ 取消上一個 render
         try {
           if (renderTask?.cancel) renderTask.cancel();
         } catch {}
@@ -52,12 +69,21 @@ export default function PdfViewer({
         const pdf = await loadingTask.promise;
         if (cancelled) return;
 
-        const page = await pdf.getPage(pageNumber);
+        // ✅ 回報總頁數
+        onPageCountRef.current?.(pdf.numPages);
+
+        // ✅ 決定要 render 哪一頁（優先 pageIndex，其次 pageNumber）
+        let pn =
+          typeof pageIndex === "number" ? pageIndex + 1 : Number(pageNumber || 1);
+
+        if (!Number.isFinite(pn)) pn = 1;
+        pn = Math.max(1, Math.min(pn, pdf.numPages));
+
+        const page = await pdf.getPage(pn);
         if (cancelled) return;
 
         const viewport = page.getViewport({ scale });
 
-        // ✅ 通知外層（用 ref）
         onPageSizeRef.current?.({
           width: Math.floor(viewport.width),
           height: Math.floor(viewport.height),
@@ -70,27 +96,22 @@ export default function PdfViewer({
         canvas.width = Math.floor(viewport.width * dpr);
         canvas.height = Math.floor(viewport.height * dpr);
 
-        // ✅ overlay 用 CSS px 當座標系統（很重要）
         canvas.style.width = `${Math.floor(viewport.width)}px`;
         canvas.style.height = `${Math.floor(viewport.height)}px`;
 
-        // ✅ reset transform（避免重 render 累積）
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // ✅ 設成 dpr scale（讓 viewport 用 CSS px render）
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        // ✅ 補回 canvas 參數（避免某些環境畫不出來/不一致）
         renderTask = page.render({
           canvasContext: ctx,
-          canvas, // ✅ 這行是關鍵
+          canvas,
           viewport,
         });
 
         await renderTask.promise;
       } catch (err: any) {
-        // ✅ 被 cancel 不算錯誤（不刷屏）
         if (err?.name === "RenderingCancelledException") return;
         console.error("[PdfViewer] render error:", err);
       }
@@ -107,8 +128,7 @@ export default function PdfViewer({
         if (loadingTask?.destroy) loadingTask.destroy();
       } catch {}
     };
-  }, [fileUrl, pageNumber, scale]);
+  }, [fileUrl, pageIndex, pageNumber, scale]);
 
-  // ✅ 不要用 w-full（會把 canvas 拉伸，overlay 座標會亂）
   return <canvas ref={canvasRef} className="border rounded-md block" />;
 }

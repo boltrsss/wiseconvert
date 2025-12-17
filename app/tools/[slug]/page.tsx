@@ -331,6 +331,12 @@ export default function DynamicToolPage() {
       // 3) settings（多檔工具帶 files）
       const finalSettings: Record<string, any> = { ...settings };
 
+      // ✅ pdf-crop：把 UI 選的裁切框送到後端
+if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
+  finalSettings.crop = cropRect; // {x,y,w,h}（CSS px 座標）
+  finalSettings.page = { width: pdfSize.width, height: pdfSize.height };
+}
+
       if (tool.allow_multiple) {
         // 多檔工具：永遠提供 files（即使只有 1 個也提供）
         finalSettings.files = uploadedKeys;
@@ -526,6 +532,27 @@ export default function DynamicToolPage() {
         )}
       </div>
     </div>
+
+    // page.tsx 內，DynamicToolPage() 裡面加一個 clamp（就放在 component 內任何地方都行）
+const clampRect = (
+  r: { x: number; y: number; w: number; h: number },
+  pageW: number,
+  pageH: number,
+  minW = 20,
+  minH = 20
+) => {
+  let w = Math.max(minW, r.w);
+  let h = Math.max(minH, r.h);
+
+  w = Math.min(w, pageW);
+  h = Math.min(h, pageH);
+
+  let x = Math.max(0, Math.min(pageW - w, r.x));
+  let y = Math.max(0, Math.min(pageH - h, r.y));
+
+  return { x, y, w, h };
+};
+
 
     <div className="text-xs text-slate-500">
       拖曳滑鼠選取裁切區域，完成後按「開始」才會真正裁切 PDF。

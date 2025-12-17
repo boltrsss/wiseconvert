@@ -177,13 +177,19 @@ export default function DynamicToolPage() {
     setPdfSize({ width: size.width, height: size.height });
 
     // ✅ 第一次初始化 cropRect：不要全頁，先給 70% 並置中（手機才看得到邊界）
-    setCropRect((prev) => {
-      if (prev) return prev;
-      const w = Math.floor(size.width * 0.7);
-      const h = Math.floor(size.height * 0.7);
-      const x = Math.floor((size.width - w) / 2);
-      const y = Math.floor((size.height - h) / 2);
-      return { x, y, w, h };
+  setCropRect((prev) => {
+  // 已經有框（使用者拖過 / resize 過）就不要再動
+  if (prev) return prev;
+
+  // 初始框：70%（mobile 也好抓）
+  const w = Math.round(size.width * 0.7);
+  const h = Math.round(size.height * 0.7);
+
+  // 置中
+  const x = Math.round((size.width - w) / 2);
+  const y = Math.round((size.height - h) / 2);
+
+  return { x, y, w, h };
     });
   },
   []

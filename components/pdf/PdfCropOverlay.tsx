@@ -17,8 +17,15 @@ type Props = {
 };
 
 type DragState =
-  | { kind: "move"; startX: number; startY: number; base: Crop }
-  | { kind: "resize"; dir: "nw" | "ne" | "sw" | "se"; startX: number; startY: number; base: Crop }
+  | { kind: "move"; startX: number; startY: number; base: Crop; pointerId: number }
+  | {
+      kind: "resize";
+      dir: "nw" | "ne" | "sw" | "se";
+      startX: number;
+      startY: number;
+      base: Crop;
+      pointerId: number;
+    }
   | null;
 
 function clampRect(r: Crop, pageW: number, pageH: number, minW = 40, minH = 40): Crop {
@@ -42,12 +49,13 @@ export default function PdfCropOverlay({ pageWidth, pageHeight, value, onChange 
   const [drag, setDrag] = useState<DragState>(null);
   const boxRef = useRef<HTMLDivElement | null>(null);
 
+  // 手機更好按：角點 18x18 + 外擴 hit area
   const handles = useMemo(
     () => [
-      { dir: "nw" as const, style: { left: -6, top: -6, cursor: "nwse-resize" } },
-      { dir: "ne" as const, style: { right: -6, top: -6, cursor: "nesw-resize" } },
-      { dir: "sw" as const, style: { left: -6, bottom: -6, cursor: "nesw-resize" } },
-      { dir: "se" as const, style: { right: -6, bottom: -6, cursor: "nwse-resize" } },
+      { dir: "nw" as const, style: { left: -10, top: -10, cursor: "nwse-resize" } },
+      { dir: "ne" as const, style: { right: -10, top: -10, cursor: "nesw-resize" } },
+      { dir: "sw" as const, style: { left: -10, bottom: -10, cursor: "nesw-resize" } },
+      { dir: "se" as const, style: { right: -10, bottom: -10, cursor: "nwse-resize" } },
     ],
     []
   );
@@ -55,15 +63,43 @@ export default function PdfCropOverlay({ pageWidth, pageHeight, value, onChange 
   const beginMove = (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setDrag({ kind: "move", startX: e.clientX, startY: e.clientY, base: value });
+
+    const el = boxRef.current;
+    if (!el) return;
+
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {}
+
+    setDrag({
+      kind: "move",
+      startX: e.clientX,
+      startY: e.clientY,
+      base: value,
+      pointerId: e.pointerId,
+    });
   };
 
   const beginResize = (dir: "nw" | "ne" | "sw" | "se") => (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setDrag({ kind: "resize", dir, startX: e.clientX, startY: e.clientY, base: value });
+
+    const el = boxRef.current;
+    if (!el) return;
+
+    // 用同一個 overlay 元素 capture（最穩，避免事件不一致）
+    try {
+      el.setPointerCapture(e.pointerId);
+    } catch {}
+
+    setDrag({
+      kind: "resize",
+      dir,
+      startX: e.clientX,
+      startY: e.clientY,
+      base: value,
+      pointerId: e.pointerId,
+    });
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -85,20 +121,19 @@ export default function PdfCropOverlay({ pageWidth, pageHeight, value, onChange 
 
     // resize
     let { x, y, w, h } = drag.base;
-    const dir = drag.dir;
 
-    if (dir === "se") {
+    if (drag.dir === "se") {
       w = drag.base.w + dx;
       h = drag.base.h + dy;
-    } else if (dir === "sw") {
+    } else if (drag.dir === "sw") {
       x = drag.base.x + dx;
       w = drag.base.w - dx;
       h = drag.base.h + dy;
-    } else if (dir === "ne") {
+    } else if (drag.dir === "ne") {
       y = drag.base.y + dy;
       w = drag.base.w + dx;
       h = drag.base.h - dy;
-    } else if (dir === "nw") {
+    } else if (drag.dir === "nw") {
       x = drag.base.x + dx;
       y = drag.base.y + dy;
       w = drag.base.w - dx;
@@ -108,7 +143,9 @@ export default function PdfCropOverlay({ pageWidth, pageHeight, value, onChange 
     onChange(clampRect({ x, y, w, h }, pageWidth, pageHeight));
   };
 
-  const endDrag = () => setDrag(null);
+  const endDrag = () => {
+    setDrag(null);
+  };
 
   return (
     <div
@@ -122,7 +159,9 @@ export default function PdfCropOverlay({ pageWidth, pageHeight, value, onChange 
         border: "2px dashed #2563eb",
         background: "rgba(37, 99, 235, 0.08)",
         boxSizing: "border-box",
-        touchAction: "none", // ✅ mobile 必加
+        cursor: drag?.kind === "move" ? "grabbing" : "move",
+        touchAction: "none", // ✅ mobile 必加：避免頁面滾動吃掉手勢
+        zIndex: 10,
       }}
       onPointerDown={beginMove}
       onPointerMove={onPointerMove}
@@ -135,11 +174,12 @@ export default function PdfCropOverlay({ pageWidth, pageHeight, value, onChange 
           onPointerDown={beginResize(h.dir)}
           style={{
             position: "absolute",
-            width: 12,
-            height: 12,
+            width: 18,
+            height: 18,
             background: "#fff",
             border: "2px solid #2563eb",
-            borderRadius: 3,
+            borderRadius: 4,
+            boxSizing: "border-box",
             touchAction: "none",
             ...h.style,
           }}

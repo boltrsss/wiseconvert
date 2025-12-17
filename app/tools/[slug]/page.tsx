@@ -657,7 +657,7 @@ export default function DynamicToolPage() {
     {/* ✅ 左側縮圖 + 右側主畫布 */}
     <div className="flex flex-col md:flex-row gap-3">
       {/* Thumbnails */}
-      <div className="md:w-[200px] md:shrink-0 w-full">
+      <div className="md:w-[150px] md:shrink-0 w-full">
         <div className="text-xs text-slate-500 mb-2">Pages</div>
 
         <div

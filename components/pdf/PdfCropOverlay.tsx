@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 
 type Crop = {
   x: number;
@@ -16,123 +16,101 @@ type Props = {
   onChange: (c: Crop) => void;
 };
 
-type HandleDir = "nw" | "ne" | "sw" | "se";
+type DragMode =
+  | { kind: "move"; startX: number; startY: number; base: Crop }
+  | { kind: "resize"; dir: string; startX: number; startY: number; base: Crop }
+  | null;
 
-const clampRect = (
+function clampRect(
   r: Crop,
   pageW: number,
   pageH: number,
-  minW = 20,
-  minH = 20
-): Crop => {
+  minW = 40,
+  minH = 40
+): Crop {
   let x = r.x;
   let y = r.y;
   let w = Math.max(minW, r.w);
   let h = Math.max(minH, r.h);
 
-  // w/h 不超出頁面
   w = Math.min(w, pageW);
   h = Math.min(h, pageH);
 
-  // x/y 讓整個框都在頁內
   x = Math.max(0, Math.min(pageW - w, x));
   y = Math.max(0, Math.min(pageH - h, y));
 
   return { x, y, w, h };
-};
+}
 
-export default function PdfCropOverlay({
-  pageWidth,
-  pageHeight,
-  value,
-  onChange,
-}: Props) {
-  const ref = useRef<HTMLDivElement | null>(null);
+export default function PdfCropOverlay({ pageWidth, pageHeight, value, onChange }: Props) {
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const [drag, setDrag] = useState<DragMode>(null);
 
-  // drag or resize 狀態
-  const modeRef = useRef<null | { type: "drag" } | { type: "resize"; dir: HandleDir }>(null);
-  const startRef = useRef<null | { x: number; y: number; rect: Crop }>(null);
+  const handles = useMemo(
+    () => [
+      { dir: "nw", style: { left: -6, top: -6, cursor: "nwse-resize" } },
+      { dir: "ne", style: { right: -6, top: -6, cursor: "nesw-resize" } },
+      { dir: "sw", style: { left: -6, bottom: -6, cursor: "nesw-resize" } },
+      { dir: "se", style: { right: -6, bottom: -6, cursor: "nwse-resize" } },
+    ],
+    []
+  );
 
-  const [dragging, setDragging] = useState(false);
-
-  const onMouseDown = (e: React.MouseEvent) => {
+  const onPointerDownMove = (e: React.PointerEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDrag({ kind: "move", startX: e.clientX, startY: e.clientY, base: value });
+  };
 
-    const target = e.target as HTMLElement;
-    const handle = target.dataset.handle as HandleDir | undefined;
+  const onPointerDownHandle = (dir: string) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDrag({ kind: "resize", dir, startX: e.clientX, startY: e.clientY, base: value });
+  };
 
-    if (handle) {
-      modeRef.current = { type: "resize", dir: handle };
-    } else {
-      modeRef.current = { type: "drag" };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag) return;
+
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+
+    if (drag.kind === "move") {
+      const next = clampRect(
+        { ...drag.base, x: drag.base.x + dx, y: drag.base.y + dy },
+        pageWidth,
+        pageHeight
+      );
+      onChange(next);
+      return;
     }
 
-    startRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      rect: { ...value },
-    };
+    // resize
+    let { x, y, w, h } = drag.base;
+    const dir = drag.dir;
 
-    setDragging(true);
-  };
-
-  const onMouseMove = (e: MouseEvent) => {
-    if (!dragging || !startRef.current || !modeRef.current) return;
-
-    const dx = e.clientX - startRef.current.x;
-    const dy = e.clientY - startRef.current.y;
-
-    const r0 = startRef.current.rect;
-    let next: Crop = { ...r0 };
-
-    if (modeRef.current.type === "drag") {
-      next.x = r0.x + dx;
-      next.y = r0.y + dy;
-    } else {
-      const dir = modeRef.current.dir;
-
-      // 東/西：改 w 或 x+w
-      if (dir.includes("e")) {
-        next.w = r0.w + dx;
-      }
-      if (dir.includes("w")) {
-        next.x = r0.x + dx;
-        next.w = r0.w - dx;
-      }
-
-      // 南/北：改 h 或 y+h
-      if (dir.includes("s")) {
-        next.h = r0.h + dy;
-      }
-      if (dir.includes("n")) {
-        next.y = r0.y + dy;
-        next.h = r0.h - dy;
-      }
+    // 依方向調整
+    if (dir.includes("e")) w = drag.base.w + dx;
+    if (dir.includes("s")) h = drag.base.h + dy;
+    if (dir.includes("w")) {
+      x = drag.base.x + dx;
+      w = drag.base.w - dx;
+    }
+    if (dir.includes("n")) {
+      y = drag.base.y + dy;
+      h = drag.base.h - dy;
     }
 
-    onChange(clampRect(next, pageWidth, pageHeight));
+    const next = clampRect({ x, y, w, h }, pageWidth, pageHeight);
+    onChange(next);
   };
 
-  const onMouseUp = () => {
-    setDragging(false);
-    startRef.current = null;
-    modeRef.current = null;
-  };
-
-  // ✅ 只綁一次（不要每次 render 都重綁）
-  useEffect(() => {
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dragging, pageWidth, pageHeight, value]);
+  const onPointerUp = () => setDrag(null);
 
   return (
     <div
-      ref={ref}
+      ref={boxRef}
       style={{
         position: "absolute",
         left: value.x,
@@ -141,29 +119,27 @@ export default function PdfCropOverlay({
         height: value.h,
         border: "2px dashed #2563eb",
         background: "rgba(37, 99, 235, 0.08)",
-        cursor: dragging ? "grabbing" : "move",
+        touchAction: "none", // ✅ mobile 必加，不然會被捲動/縮放吃掉
         boxSizing: "border-box",
       }}
-      onMouseDown={onMouseDown}
+      onPointerDown={onPointerDownMove}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
     >
-      {/* ✅ 四角 resize handles */}
-      {(["nw", "ne", "sw", "se"] as const).map((dir) => (
+      {handles.map((h) => (
         <div
-          key={dir}
-          data-handle={dir}
+          key={h.dir}
+          onPointerDown={onPointerDownHandle(h.dir)}
           style={{
             position: "absolute",
             width: 12,
             height: 12,
             background: "#fff",
-            border: "1px solid #2563eb",
-            borderRadius: 2,
-            left: dir.includes("w") ? -6 : undefined,
-            right: dir.includes("e") ? -6 : undefined,
-            top: dir.includes("n") ? -6 : undefined,
-            bottom: dir.includes("s") ? -6 : undefined,
-            cursor:
-              dir === "nw" || dir === "se" ? "nwse-resize" : "nesw-resize",
+            border: "2px solid #2563eb",
+            borderRadius: 3,
+            touchAction: "none",
+            ...h.style,
           }}
         />
       ))}

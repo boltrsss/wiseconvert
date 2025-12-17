@@ -683,6 +683,7 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
       )}
 
       {/* Settings form */}
+    {tool.slug !== "pdf-crop" && (
       <section className="p-4 border rounded-xl space-y-3">
         <h2 className="font-semibold text-lg">3. 進階設定</h2>
 
@@ -754,6 +755,7 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
 
         })}
       </section>
+  )}
 
       {/* Start button & status */}
       <section className="p-4 border rounded-xl space-y-4">

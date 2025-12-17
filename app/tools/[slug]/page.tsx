@@ -666,7 +666,7 @@ export default function DynamicToolPage() {
           className="border rounded-md overflow-auto bg-white relative z-0"
           style={{ maxHeight: "70vh" }}
         >
-          <div className="p-2 flex md:block gap-2 md:space-y-2">
+          <div className="p-2 flex md:block gap-2 md:space-y-2 items-start">
             {Array.from({ length: Math.min(pageCount, THUMB_MAX) }).map((_, i) => {
               const active = i === pageIndex;
 
@@ -676,7 +676,7 @@ export default function DynamicToolPage() {
                   type="button"
                   onClick={() => setPageIndex(i)}
                   className={[
-                    "shrink-0 md:w-full w-[120px] text-left rounded-md border p-1 bg-white hover:bg-slate-50 transition",
+                    "self-start inline-flex flex-col shrink-0 md:w-full w-[120px] text-left rounded-md border p-1 bg-white hover:bg-slate-50 transition",
                     active ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200",
                   ].join(" ")}
                   title={`Page ${i + 1}`}
@@ -687,7 +687,7 @@ export default function DynamicToolPage() {
                     </span>
                   </div>
 
-                  <div className="flex justify-center">
+                  <div className="flex justify-center items-start">
                     <PdfViewer
                       fileUrl={previewUrl}
                       pageIndex={i}

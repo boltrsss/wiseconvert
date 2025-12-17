@@ -57,7 +57,6 @@ type Crop = {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
 
-// 用於去重（避免使用者重複選到同一個檔案造成清單爆炸）
 function fileFingerprint(f: File) {
   return `${f.name}__${f.size}__${f.lastModified}`;
 }
@@ -68,14 +67,13 @@ export default function DynamicToolPage() {
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // ✅ Drag & Drop（Hook-safe，無第三方套件）
   const dragIndexRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const [tool, setTool] = useState<ToolSchema | null>(null);
   const [loadingSchema, setLoadingSchema] = useState(true);
   const [schemaError, setSchemaError] = useState<string | null>(null);
-  
+
   const [files, setFiles] = useState<File[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [isWorking, setIsWorking] = useState(false);
@@ -83,14 +81,16 @@ export default function DynamicToolPage() {
   const [statusError, setStatusError] = useState<string | null>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [pdfSize, setPdfSize] = useState<{ width: number; height: number } | null>(
-  null
-);
+  const [pdfSize, setPdfSize] = useState<{ width: number; height: number } | null>(null);
   const [cropRect, setCropRect] = useState<Crop | null>(null);
   const [pdfScale, setPdfScale] = useState(1.0);
   const lastScaleRef = useRef(1.0);
   const cropWrapRef = useRef<HTMLDivElement | null>(null);
 
+  // ✅ NEW: 多頁 + apply_to
+  const [pageIndex, setPageIndex] = useState(0); // 0-based
+  const [pageCount, setPageCount] = useState(1);
+  const [applyTo, setApplyTo] = useState<"all" | "first">("all");
 
   // 取得工具 schema（slug 改變才重置）
   useEffect(() => {
@@ -113,7 +113,6 @@ export default function DynamicToolPage() {
 
         setTool(data);
 
-        // 初始化設定值
         const init: Record<string, any> = {};
         Object.entries(data.settings || {}).forEach(([key, def]) => {
           init[key] = def.default ?? "";
@@ -134,32 +133,32 @@ export default function DynamicToolPage() {
     };
   }, [slug]);
 
-
-  //pdf-preview
+  // pdf-preview
   useEffect(() => {
-  // 只在 pdf-crop 工具才需要 preview
-  if (tool?.slug !== "pdf-crop") {
-    setPreviewUrl(null);
-    setCropRect(null);
-    return;
-  }
+    if (tool?.slug !== "pdf-crop") {
+      setPreviewUrl(null);
+      setCropRect(null);
+      return;
+    }
 
-  const f = files[0];
-  if (!f) {
-    setPreviewUrl(null);
-    setCropRect(null);
-    return;
-  }
+    const f = files[0];
+    if (!f) {
+      setPreviewUrl(null);
+      setCropRect(null);
+      return;
+    }
 
-  // ⭐ 這行就是「本機 preview」的核心
-  const url = URL.createObjectURL(f);
-  setPreviewUrl(url);
+    const url = URL.createObjectURL(f);
+    setPreviewUrl(url);
 
-  return () => {
-    URL.revokeObjectURL(url);
-  };
-}, [files, tool?.slug]);
+    // ✅ 新檔案時重置頁碼/頁數
+    setPageIndex(0);
+    setPageCount(1);
 
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [files, tool?.slug]);
 
   const handleSettingChange = (key: string, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -173,46 +172,53 @@ export default function DynamicToolPage() {
     return settings[target] === expected;
   };
 
-
-  //pdf-fixcode
+  // pdf-fixcode
   const handlePdfPageSize = React.useCallback(
-  (size: { width: number; height: number; scale: number }) => {
-    setPdfSize({ width: size.width, height: size.height });
-    setPdfScale(size.scale);
+    (size: { width: number; height: number; scale: number }) => {
+      setPdfSize({ width: size.width, height: size.height });
+      setPdfScale(size.scale);
 
-    // ✅ scale 改變時，裁切框等比例縮放（FreeConvert 行為）
-    const prevScale = lastScaleRef.current;
-    const nextScale = size.scale;
-    const ratio = prevScale ? nextScale / prevScale : 1;
+      const prevScale = lastScaleRef.current;
+      const nextScale = size.scale;
+      const ratio = prevScale ? nextScale / prevScale : 1;
 
-    if (ratio !== 1) {
+      if (ratio !== 1) {
+        setCropRect((prev) => {
+          if (!prev) return prev;
+          return {
+            x: Math.round(prev.x * ratio),
+            y: Math.round(prev.y * ratio),
+            w: Math.round(prev.w * ratio),
+            h: Math.round(prev.h * ratio),
+          };
+        });
+      }
+
+      lastScaleRef.current = nextScale;
+
+      // ✅ 第一次初始化 cropRect（只做一次）
       setCropRect((prev) => {
-        if (!prev) return prev;
-        return {
-          x: Math.round(prev.x * ratio),
-          y: Math.round(prev.y * ratio),
-          w: Math.round(prev.w * ratio),
-          h: Math.round(prev.h * ratio),
-        };
+        if (prev) return prev;
+        const w = Math.round(size.width * 0.5);
+        const h = Math.round(size.height * 0.5);
+        const x = Math.round((size.width - w) / 2);
+        const y = Math.round((size.height - h) / 2);
+        return { x, y, w, h };
       });
-    }
+    },
+    []
+  );
 
-    lastScaleRef.current = nextScale;
+  // ✅ 換頁：重新初始化裁切框（用新頁尺寸）
+  useEffect(() => {
+    if (tool?.slug !== "pdf-crop") return;
+    if (!pdfSize) return;
 
-    // ✅ 第一次初始化 cropRect（只做一次）
-    setCropRect((prev) => {
-      if (prev) return prev;
-      const w = Math.round(size.width * 0.5);
-      const h = Math.round(size.height * 0.5);
-      const x = Math.round((size.width - w) / 2);
-      const y = Math.round((size.height - h) / 2);
-      return { x, y, w, h };
-    });
-  },
-  []
-);
-  
-  // ✅ 多檔工具：再選檔「追加」而不是覆蓋（且去重）
+    // 每次換頁先清掉 cropRect，等 PdfViewer 回報新頁尺寸後再初始化
+    setCropRect(null);
+    lastScaleRef.current = pdfScale;
+  }, [pageIndex, tool?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!tool) return;
 
@@ -222,15 +228,12 @@ export default function DynamicToolPage() {
     setStatus(null);
     setStatusError(null);
 
-    // 單檔工具：直接取第一個（覆蓋）
     if (!tool.allow_multiple) {
       setFiles([picked[0]]);
-      // 允許下一次選到同一個檔也能觸發 onChange
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
 
-    // 多檔工具：追加 + 去重
     setFiles((prev) => {
       const seen = new Set(prev.map(fileFingerprint));
       const next = [...prev];
@@ -244,7 +247,6 @@ export default function DynamicToolPage() {
       return next;
     });
 
-    // 允許下一次選到同一個檔也能觸發 onChange
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -265,7 +267,6 @@ export default function DynamicToolPage() {
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  // ✅ 拖曳排序：移動檔案（from -> to）
   const moveFile = (from: number, to: number) => {
     if (from === to) return;
     setFiles((prev) => {
@@ -303,7 +304,6 @@ export default function DynamicToolPage() {
     setStatusError(null);
 
     try {
-      // 1) 逐檔上傳到 S3，取得 keys（順序 = 目前 files 順序，會影響合併順序）
       const uploadedKeys: string[] = [];
 
       for (const file of files) {
@@ -332,7 +332,6 @@ export default function DynamicToolPage() {
 
       if (!uploadedKeys.length) throw new Error("No files uploaded");
 
-      // 2) output_format（通用）
       const firstFile = files[0];
       const extFromName =
         firstFile?.name.includes(".") &&
@@ -344,42 +343,34 @@ export default function DynamicToolPage() {
         extFromName ||
         "pdf";
 
-      // 3) settings（多檔工具帶 files）
       const finalSettings: Record<string, any> = { ...settings };
 
       // ✅ pdf-crop：把 UI 選的裁切框送到後端
-if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
-  finalSettings.crop = cropRect; // {x,y,w,h} (CSS px)
-  finalSettings.page = { width: pdfSize.width, height: pdfSize.height, scale: pdfScale };
+      if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
+        const pw = Number(pdfSize.width) || 1;
+        const ph = Number(pdfSize.height) || 1;
 
-  // ✅ B) normalized crop (0~1) — 用現有 cropRect/pdfSize，不要用 crop/page
-  const pw = Number(pdfSize.width) || 1;
-  const ph = Number(pdfSize.height) || 1;
+        finalSettings.crop_norm = {
+          x: cropRect.x / pw,
+          y: cropRect.y / ph,
+          w: cropRect.w / pw,
+          h: cropRect.h / ph,
+        };
 
-  finalSettings.crop_norm = {
-    x: cropRect.x / pw,
-    y: cropRect.y / ph,
-    w: cropRect.w / pw,
-    h: cropRect.h / ph,
-  };
-
-  // （先固定，之後你要做多頁再接 UI）
-  finalSettings.page_index = 0;
-  finalSettings.apply_to = "all";
-}
-
+        // ✅ NEW: 多頁/套用方式
+        finalSettings.page_index = pageIndex; // 0-based
+        finalSettings.apply_to = applyTo; // "first" | "all"
+      }
 
       if (tool.allow_multiple) {
-        // 多檔工具：永遠提供 files（即使只有 1 個也提供）
         finalSettings.files = uploadedKeys;
       }
 
-      // 4) start
       const startRes = await fetch(`${API_BASE_URL}/api/start-conversion`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          s3_key: uploadedKeys[0], // 主檔（或第一個）
+          s3_key: uploadedKeys[0],
           target_format: outputFormat,
           tool_slug: tool.slug,
           settings: finalSettings,
@@ -403,8 +394,6 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
     }
   };
 
-  // ------------------ UI ------------------
-
   if (loadingSchema) return <div className="p-8">Loading…</div>;
   if (schemaError) return <div className="p-8 text-red-600">{schemaError}</div>;
   if (!tool) return <div className="p-8 text-red-600">Tool not found</div>;
@@ -418,8 +407,7 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
     (status.file_url?.toLowerCase().includes(".zip") ||
       status.output_s3_key?.toLowerCase().endsWith(".zip"));
 
-  const actionLabel =
-    tool.slug === "pdf-merge" ? "開始合併" : "開始";
+  const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
 
   return (
     <div className="max-w-3xl mx-auto py-10 px-5 space-y-8">
@@ -435,7 +423,9 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
             <h2 className="font-semibold text-lg">
               上傳檔案
               {isMulti && (
-                <span className="ml-2 text-xs text-slate-500">(可多選 / 可追加 / 可拖曳排序)</span>
+                <span className="ml-2 text-xs text-slate-500">
+                  (可多選 / 可追加 / 可拖曳排序)
+                </span>
               )}
             </h2>
             <p className="text-xs text-slate-500 mt-1">
@@ -528,152 +518,199 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
                 </li>
               ))}
             </ul>
-
-            {isMulti && tool.slug === "pdf-merge" && files.length > 1 && (
-              <div className="text-xs text-slate-600">
-                合併順序會依照上面清單由上到下（可拖曳調整）。
-              </div>
-            )}
           </div>
         )}
       </section>
 
-{/* ✅ PDF Crop Preview */}
-
+      {/* ✅ PDF Crop Preview */}
       {tool.slug === "pdf-crop" && previewUrl && (
-  <section className="p-4 border rounded-xl space-y-3">
-    <div className="flex items-center justify-between gap-2">
-      <h2 className="font-semibold text-lg">2. 裁切</h2>
+        <section className="p-4 border rounded-xl space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-semibold text-lg">2. 裁切</h2>
 
-      {/* ✅ FreeConvert 風格：右上角工具列 */}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
-          onClick={() => setPdfScale((s) => Math.max(0.6, Math.round((s - 0.1) * 10) / 10))}
-        >
-          −
-        </button>
+            {/* ✅ 右上角工具列 */}
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {/* ✅ NEW: Page + Apply to */}
+              <div className="flex items-center gap-2 mr-2">
+                <button
+                  type="button"
+                  className="px-2.5 py-1.5 text-sm border rounded-md hover:bg-slate-50 disabled:opacity-50"
+                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                  disabled={pageIndex <= 0}
+                >
+                  Prev
+                </button>
 
-        <div className="text-sm tabular-nums w-14 text-center">
-          {Math.round(pdfScale * 100)}%
-        </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span>Page</span>
+                  <input
+                    className="w-16 px-2 py-1.5 rounded-md border"
+                    type="number"
+                    min={1}
+                    max={pageCount}
+                    value={pageIndex + 1}
+                    onChange={(e) => {
+                      const v = Number(e.target.value || 1);
+                      const next = Math.min(Math.max(v, 1), pageCount) - 1;
+                      setPageIndex(next);
+                    }}
+                  />
+                  <span className="text-slate-500">/ {pageCount}</span>
+                </div>
 
-        <button
-          type="button"
-          className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
-          onClick={() => setPdfScale((s) => Math.min(2.2, Math.round((s + 0.1) * 10) / 10))}
-        >
-          +
-        </button>
+                <button
+                  type="button"
+                  className="px-2.5 py-1.5 text-sm border rounded-md hover:bg-slate-50 disabled:opacity-50"
+                  onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+                  disabled={pageIndex >= pageCount - 1}
+                >
+                  Next
+                </button>
 
-        <button
-          type="button"
-          className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
-          onClick={() => {
-            const el = cropWrapRef.current;
-            if (!el || !pdfSize) return;
-            const cw = el.clientWidth - 16; // 留一點 padding
-            const ratio = cw / pdfSize.width;
-            setPdfScale((s) => {
-              const next = s * ratio;
-              return Math.max(0.6, Math.min(2.2, Math.round(next * 10) / 10));
-            });
-          }}
-        >
-          Fit
-        </button>
+                <select
+                  className="px-2.5 py-1.5 text-sm border rounded-md bg-white"
+                  value={applyTo}
+                  onChange={(e) => setApplyTo(e.target.value as "all" | "first")}
+                  title="Apply crop to..."
+                >
+                  <option value="all">All pages</option>
+                  <option value="first">This page only</option>
+                </select>
+              </div>
 
-        <button
-          type="button"
-          className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
-          onClick={() => {
-            if (!pdfSize) return;
-            const w = Math.round(pdfSize.width * 0.5);
-            const h = Math.round(pdfSize.height * 0.5);
-            const x = Math.round((pdfSize.width - w) / 2);
-            const y = Math.round((pdfSize.height - h) / 2);
-            setCropRect({ x, y, w, h });
-          }}
-        >
-          Reset
-        </button>
+              {/* Zoom */}
+              <button
+                type="button"
+                className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+                onClick={() =>
+                  setPdfScale((s) => Math.max(0.6, Math.round((s - 0.1) * 10) / 10))
+                }
+              >
+                −
+              </button>
 
-        <button
-          type="button"
-          className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
-          onClick={() => {
-            if (!pdfSize) return;
-            setCropRect({ x: 0, y: 0, w: pdfSize.width, h: pdfSize.height });
-          }}
-        >
-          Full
-        </button>
-      </div>
-    </div>
+              <div className="text-sm tabular-nums w-14 text-center">
+                {Math.round(pdfScale * 100)}%
+              </div>
 
-    {/* ✅ 主要畫布：不做奇怪的 inline-block，保持乾淨 */}
-    <div
-      ref={cropWrapRef}
-      className="border rounded-md overflow-auto bg-white"
-      style={{ maxHeight: "70vh" }}
-    >
-      <div
-        className="relative"
-        style={{
-          width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
-          height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
-        }}
-      >
-        <PdfViewer
-          fileUrl={previewUrl}
-          scale={pdfScale}
-          onPageSize={handlePdfPageSize}
-        />
+              <button
+                type="button"
+                className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+                onClick={() =>
+                  setPdfScale((s) => Math.min(2.2, Math.round((s + 0.1) * 10) / 10))
+                }
+              >
+                +
+              </button>
 
-        {pdfSize && cropRect && (
-          <PdfCropOverlay
-            pageWidth={pdfSize.width}
-            pageHeight={pdfSize.height}
-            value={cropRect}
-            onChange={setCropRect}
-          />
-        )}
-      </div>
-    </div>
+              <button
+                type="button"
+                className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+                onClick={() => {
+                  const el = cropWrapRef.current;
+                  if (!el || !pdfSize) return;
+                  const cw = el.clientWidth - 16;
+                  const ratio = cw / pdfSize.width;
+                  setPdfScale((s) => {
+                    const next = s * ratio;
+                    return Math.max(0.6, Math.min(2.2, Math.round(next * 10) / 10));
+                  });
+                }}
+              >
+                Fit
+              </button>
 
-    {/* ✅ 即時連動顯示（重點：不逼人手打） */}
-    {cropRect && (
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-        <div className="px-3 py-2 border rounded-md bg-slate-50">
-          <div className="text-xs text-slate-500">X</div>
-          <div className="tabular-nums">{cropRect.x}</div>
-        </div>
-        <div className="px-3 py-2 border rounded-md bg-slate-50">
-          <div className="text-xs text-slate-500">Y</div>
-          <div className="tabular-nums">{cropRect.y}</div>
-        </div>
-        <div className="px-3 py-2 border rounded-md bg-slate-50">
-          <div className="text-xs text-slate-500">W</div>
-          <div className="tabular-nums">{cropRect.w}</div>
-        </div>
-        <div className="px-3 py-2 border rounded-md bg-slate-50">
-          <div className="text-xs text-slate-500">H</div>
-          <div className="tabular-nums">{cropRect.h}</div>
-        </div>
-      </div>
-    )}
+              <button
+                type="button"
+                className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+                onClick={() => {
+                  if (!pdfSize) return;
+                  const w = Math.round(pdfSize.width * 0.5);
+                  const h = Math.round(pdfSize.height * 0.5);
+                  const x = Math.round((pdfSize.width - w) / 2);
+                  const y = Math.round((pdfSize.height - h) / 2);
+                  setCropRect({ x, y, w, h });
+                }}
+              >
+                Reset
+              </button>
 
-    <div className="text-xs text-slate-500">
-      直接拖曳與拉角落調整裁切區域。按「開始」才會真正裁切 PDF。
-    </div>
-  </section>
-)}
+              <button
+                type="button"
+                className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+                onClick={() => {
+                  if (!pdfSize) return;
+                  setCropRect({ x: 0, y: 0, w: pdfSize.width, h: pdfSize.height });
+                }}
+              >
+                Full
+              </button>
+            </div>
+          </div>
 
+          <div
+            ref={cropWrapRef}
+            className="border rounded-md overflow-auto bg-white"
+            style={{ maxHeight: "70vh" }}
+          >
+            <div
+              className="relative"
+              style={{
+                width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
+                height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
+              }}
+            >
+              <PdfViewer
+                fileUrl={previewUrl}
+                scale={pdfScale}
+                pageIndex={pageIndex} // ✅ NEW
+                onPageCount={(n) => {
+                  setPageCount(n || 1);
+                  // clamp pageIndex
+                  setPageIndex((p) => Math.min(Math.max(p, 0), Math.max((n || 1) - 1, 0)));
+                }}
+                onPageSize={handlePdfPageSize}
+              />
 
+              {pdfSize && cropRect && (
+                <PdfCropOverlay
+                  pageWidth={pdfSize.width}
+                  pageHeight={pdfSize.height}
+                  value={cropRect}
+                  onChange={setCropRect}
+                />
+              )}
+            </div>
+          </div>
 
+          {cropRect && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+              <div className="px-3 py-2 border rounded-md bg-slate-50">
+                <div className="text-xs text-slate-500">X</div>
+                <div className="tabular-nums">{cropRect.x}</div>
+              </div>
+              <div className="px-3 py-2 border rounded-md bg-slate-50">
+                <div className="text-xs text-slate-500">Y</div>
+                <div className="tabular-nums">{cropRect.y}</div>
+              </div>
+              <div className="px-3 py-2 border rounded-md bg-slate-50">
+                <div className="text-xs text-slate-500">W</div>
+                <div className="tabular-nums">{cropRect.w}</div>
+              </div>
+              <div className="px-3 py-2 border rounded-md bg-slate-50">
+                <div className="text-xs text-slate-500">H</div>
+                <div className="tabular-nums">{cropRect.h}</div>
+              </div>
+            </div>
+          )}
 
-            {/* Output format */}
+          <div className="text-xs text-slate-500">
+            直接拖曳與拉角落調整裁切區域。按「開始」才會真正裁切 PDF。
+          </div>
+        </section>
+      )}
+
+      {/* Output format */}
       {tool.output_formats && tool.output_formats.length > 0 && (
         <section className="p-4 border rounded-xl space-y-3">
           <h2 className="font-semibold text-lg">輸出格式</h2>
@@ -681,9 +718,7 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
           <select
             className="border rounded-md px-3 py-2 text-sm w-full"
             value={settings.output_format ?? tool.output_formats[0]}
-            onChange={(e) =>
-              handleSettingChange("output_format", e.target.value)
-            }
+            onChange={(e) => handleSettingChange("output_format", e.target.value)}
           >
             {tool.output_formats.map((fmt) => (
               <option key={fmt} value={fmt}>
@@ -692,86 +727,79 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
             ))}
           </select>
 
-          <p className="text-xs text-slate-500">
-            選擇轉換後的輸出格式
-          </p>
+          <p className="text-xs text-slate-500">選擇轉換後的輸出格式</p>
         </section>
       )}
 
       {/* Settings form */}
-    {tool.slug !== "pdf-crop" && (
-      <section className="p-4 border rounded-xl space-y-3">
-        <h2 className="font-semibold text-lg">進階設定</h2>
+      {tool.slug !== "pdf-crop" && (
+        <section className="p-4 border rounded-xl space-y-3">
+          <h2 className="font-semibold text-lg">進階設定</h2>
 
-        {Object.entries(tool.settings || {}).length === 0 && (
-          <p className="text-sm text-slate-500">此工具無需額外設定。</p>
-        )}
+          {Object.entries(tool.settings || {}).length === 0 && (
+            <p className="text-sm text-slate-500">此工具無需額外設定。</p>
+          )}
 
-        {Object.entries(tool.settings || {}).map(([key, def]) => {
-          if (!shouldShow(key)) return null;
+          {Object.entries(tool.settings || {}).map(([key, def]) => {
+            if (!shouldShow(key)) return null;
 
-          return (
-  <div key={key} className="space-y-1">
-    <label className="block text-sm font-medium">{def.label}</label>
-    {"description" in def && (def as any).description ? (
-      <p className="text-xs text-slate-500">{(def as any).description}</p>
-    ) : null}
+            return (
+              <div key={key} className="space-y-1">
+                <label className="block text-sm font-medium">{def.label}</label>
 
-    {def.type === "select" && (
-      <select
-        className="border rounded-md px-3 py-2 text-sm w-full"
-        value={settings[key] ?? ""}
-        onChange={(e) => handleSettingChange(key, e.target.value)}
-      >
-        {def.options?.map((opt) => (
-          <option key={String(opt.value)} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-    )}
+                {def.type === "select" && (
+                  <select
+                    className="border rounded-md px-3 py-2 text-sm w-full"
+                    value={settings[key] ?? ""}
+                    onChange={(e) => handleSettingChange(key, e.target.value)}
+                  >
+                    {def.options?.map((opt) => (
+                      <option key={String(opt.value)} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
-    {def.type === "number" && (
-      <input
-        type="number"
-        className="border rounded-md px-3 py-2 text-sm w-full"
-        value={settings[key] ?? ""}
-        min={def.min}
-        max={def.max}
-        step={def.step ?? 1}
-        onChange={(e) => {
-        const v = e.target.value;
-        handleSettingChange(key, v === "" ? "" : Number(v));
-          }}
+                {def.type === "number" && (
+                  <input
+                    type="number"
+                    className="border rounded-md px-3 py-2 text-sm w-full"
+                    value={settings[key] ?? ""}
+                    min={def.min}
+                    max={def.max}
+                    step={def.step ?? 1}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      handleSettingChange(key, v === "" ? "" : Number(v));
+                    }}
+                  />
+                )}
 
-      />
-    )}
+                {def.type === "text" && (
+                  <input
+                    type="text"
+                    className="border rounded-md px-3 py-2 text-sm w-full"
+                    value={settings[key] ?? ""}
+                    onChange={(e) => handleSettingChange(key, e.target.value)}
+                  />
+                )}
 
-    {def.type === "text" && (
-      <input
-        type="text"
-        className="border rounded-md px-3 py-2 text-sm w-full"
-        value={settings[key] ?? ""}
-        onChange={(e) => handleSettingChange(key, e.target.value)}
-      />
-    )}
-
-    {def.type === "boolean" && (
-      <label className="inline-flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={!!settings[key]}
-          onChange={(e) => handleSettingChange(key, e.target.checked)}
-        />
-        <span className="text-slate-700">Enable</span>
-      </label>
-    )}
-  </div>
-);
-
-        })}
-      </section>
-  )}
+                {def.type === "boolean" && (
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={!!settings[key]}
+                      onChange={(e) => handleSettingChange(key, e.target.checked)}
+                    />
+                    <span className="text-slate-700">Enable</span>
+                  </label>
+                )}
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       {/* Start button & status */}
       <section className="p-4 border rounded-xl space-y-4">

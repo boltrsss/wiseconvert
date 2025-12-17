@@ -676,7 +676,7 @@ export default function DynamicToolPage() {
                   onClick={() => setPageIndex(i)}
                   className={[
                     "self-start inline-flex flex-col shrink-0 md:w-full w-[120px] text-left rounded-md border p-1 bg-white hover:bg-slate-50 transition",
-                    active ? "border-blue-600 ring-2 ring-blue-600 : "border-slate-200"
+                    active ? "border-blue-600 ring-2 ring-blue-600 : "border-slate-200",
                   ].join(" ")}
                   title={`Page ${i + 1}`}
                 >

@@ -553,86 +553,136 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
     </div>
 
           {/* ✅ 連動數值面板（放在 section 內、提示文字上方） */}
-{tool.slug === "pdf-crop" && previewUrl && pdfSize && cropRect && (
-  <div className="mt-3 grid grid-cols-2 gap-3">
-    <div className="space-y-1">
-      <label className="text-xs text-slate-600">X</label>
-      <input
-        type="number"
-        className="border rounded-md px-3 py-2 text-sm w-full"
-        value={Math.round(cropRect.x)}
-        onChange={(e) => {
-          const x = Number(e.target.value || 0);
-          setCropRect((prev) =>
-            prev
-              ? { ...prev, x: Math.max(0, Math.min(pdfSize.width - prev.w, x)) }
-              : prev
-          );
-        }}
-      />
+            {tool.slug === "pdf-crop" && previewUrl && (
+  <section className="p-4 border rounded-xl space-y-3">
+    <div className="flex items-center justify-between gap-2">
+      <h2 className="font-semibold text-lg">2. 裁切</h2>
+
+      {/* ✅ FreeConvert 風格：右上角工具列 */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+          onClick={() => setPdfScale((s) => Math.max(0.6, Math.round((s - 0.1) * 10) / 10))}
+        >
+          −
+        </button>
+
+        <div className="text-sm tabular-nums w-14 text-center">
+          {Math.round(pdfScale * 100)}%
+        </div>
+
+        <button
+          type="button"
+          className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+          onClick={() => setPdfScale((s) => Math.min(2.2, Math.round((s + 0.1) * 10) / 10))}
+        >
+          +
+        </button>
+
+        <button
+          type="button"
+          className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+          onClick={() => {
+            const el = cropWrapRef.current;
+            if (!el || !pdfSize) return;
+            const cw = el.clientWidth - 16; // 留一點 padding
+            const ratio = cw / pdfSize.width;
+            setPdfScale((s) => {
+              const next = s * ratio;
+              return Math.max(0.6, Math.min(2.2, Math.round(next * 10) / 10));
+            });
+          }}
+        >
+          Fit
+        </button>
+
+        <button
+          type="button"
+          className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+          onClick={() => {
+            if (!pdfSize) return;
+            const w = Math.round(pdfSize.width * 0.5);
+            const h = Math.round(pdfSize.height * 0.5);
+            const x = Math.round((pdfSize.width - w) / 2);
+            const y = Math.round((pdfSize.height - h) / 2);
+            setCropRect({ x, y, w, h });
+          }}
+        >
+          Reset
+        </button>
+
+        <button
+          type="button"
+          className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+          onClick={() => {
+            if (!pdfSize) return;
+            setCropRect({ x: 0, y: 0, w: pdfSize.width, h: pdfSize.height });
+          }}
+        >
+          Full
+        </button>
+      </div>
     </div>
 
-    <div className="space-y-1">
-      <label className="text-xs text-slate-600">Y</label>
-      <input
-        type="number"
-        className="border rounded-md px-3 py-2 text-sm w-full"
-        value={Math.round(cropRect.y)}
-        onChange={(e) => {
-          const y = Number(e.target.value || 0);
-          setCropRect((prev) =>
-            prev
-              ? { ...prev, y: Math.max(0, Math.min(pdfSize.height - prev.h, y)) }
-              : prev
-          );
+    {/* ✅ 主要畫布：不做奇怪的 inline-block，保持乾淨 */}
+    <div
+      ref={cropWrapRef}
+      className="border rounded-md overflow-auto bg-white"
+      style={{ maxHeight: "70vh" }}
+    >
+      <div
+        className="relative"
+        style={{
+          width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
+          height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
         }}
-      />
+      >
+        <PdfViewer
+          fileUrl={previewUrl}
+          scale={pdfScale}
+          onPageSize={handlePdfPageSize}
+        />
+
+        {pdfSize && cropRect && (
+          <PdfCropOverlay
+            pageWidth={pdfSize.width}
+            pageHeight={pdfSize.height}
+            value={cropRect}
+            onChange={setCropRect}
+          />
+        )}
+      </div>
     </div>
 
-    <div className="space-y-1">
-      <label className="text-xs text-slate-600">W</label>
-      <input
-        type="number"
-        className="border rounded-md px-3 py-2 text-sm w-full"
-        value={Math.round(cropRect.w)}
-        onChange={(e) => {
-          const w = Number(e.target.value || 0);
-          setCropRect((prev) => {
-            if (!prev) return prev;
-            const ww = Math.max(40, Math.min(pdfSize.width, w));
-            const xx = Math.max(0, Math.min(pdfSize.width - ww, prev.x));
-            return { ...prev, x: xx, w: ww };
-          });
-        }}
-      />
-    </div>
-
-    <div className="space-y-1">
-      <label className="text-xs text-slate-600">H</label>
-      <input
-        type="number"
-        className="border rounded-md px-3 py-2 text-sm w-full"
-        value={Math.round(cropRect.h)}
-        onChange={(e) => {
-          const h = Number(e.target.value || 0);
-          setCropRect((prev) => {
-            if (!prev) return prev;
-            const hh = Math.max(40, Math.min(pdfSize.height, h));
-            const yy = Math.max(0, Math.min(pdfSize.height - hh, prev.y));
-            return { ...prev, y: yy, h: hh };
-          });
-        }}
-      />
-    </div>
-  </div>
-)}
-
+    {/* ✅ 即時連動顯示（重點：不逼人手打） */}
+    {cropRect && (
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+        <div className="px-3 py-2 border rounded-md bg-slate-50">
+          <div className="text-xs text-slate-500">X</div>
+          <div className="tabular-nums">{cropRect.x}</div>
+        </div>
+        <div className="px-3 py-2 border rounded-md bg-slate-50">
+          <div className="text-xs text-slate-500">Y</div>
+          <div className="tabular-nums">{cropRect.y}</div>
+        </div>
+        <div className="px-3 py-2 border rounded-md bg-slate-50">
+          <div className="text-xs text-slate-500">W</div>
+          <div className="tabular-nums">{cropRect.w}</div>
+        </div>
+        <div className="px-3 py-2 border rounded-md bg-slate-50">
+          <div className="text-xs text-slate-500">H</div>
+          <div className="tabular-nums">{cropRect.h}</div>
+        </div>
+      </div>
+    )}
 
     <div className="text-xs text-slate-500">
-      拖曳滑鼠選取裁切區域，完成後按「開始」才會真正裁切 PDF。
+      直接拖曳與拉角落調整裁切區域。按「開始」才會真正裁切 PDF。
     </div>
   </section>
 )}
+
 
 
 

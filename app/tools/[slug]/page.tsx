@@ -723,6 +723,8 @@ export default function DynamicToolPage() {
           className="border rounded-md overflow-auto bg-white"
           style={{ maxHeight: "70vh" }}
         >
+          {/* ✅ 置中用 wrapper */}
+        <div className="min-w-full flex justify-center">
           <div
             className="relative z-0"
             style={{
@@ -754,7 +756,7 @@ export default function DynamicToolPage() {
             )}
           </div>
         </div>
-
+      </div>
         {cropRect && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm mt-3">
             <div className="px-3 py-2 border rounded-md bg-slate-50">

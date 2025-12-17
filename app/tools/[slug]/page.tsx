@@ -417,7 +417,7 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="font-semibold text-lg">
-              1. 上傳檔案
+              上傳檔案
               {isMulti && (
                 <span className="ml-2 text-xs text-slate-500">(可多選 / 可追加 / 可拖曳排序)</span>
               )}
@@ -660,7 +660,7 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
             {/* Output format */}
       {tool.output_formats && tool.output_formats.length > 0 && (
         <section className="p-4 border rounded-xl space-y-3">
-          <h2 className="font-semibold text-lg">2. 輸出格式</h2>
+          <h2 className="font-semibold text-lg">輸出格式</h2>
 
           <select
             className="border rounded-md px-3 py-2 text-sm w-full"
@@ -685,7 +685,7 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
       {/* Settings form */}
     {tool.slug !== "pdf-crop" && (
       <section className="p-4 border rounded-xl space-y-3">
-        <h2 className="font-semibold text-lg">3. 進階設定</h2>
+        <h2 className="font-semibold text-lg">進階設定</h2>
 
         {Object.entries(tool.settings || {}).length === 0 && (
           <p className="text-sm text-slate-500">此工具無需額外設定。</p>
@@ -759,7 +759,7 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
 
       {/* Start button & status */}
       <section className="p-4 border rounded-xl space-y-4">
-        <h2 className="font-semibold text-lg">4. 開始</h2>
+        <h2 className="font-semibold text-lg">開始</h2>
         <button
           className="
             bg-blue-600 hover:bg-blue-700

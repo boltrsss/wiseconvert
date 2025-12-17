@@ -532,9 +532,9 @@ export default function DynamicToolPage() {
       <h2 className="font-semibold text-lg">裁切</h2>
 
       {/* ✅ 右上角工具列（mobile 兩行） */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:flex-wrap sm:justify-end">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:flex-nowrap">
         {/* Page + Apply */}
-        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto sm:mr-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto sm:mr-2">
           <button
             type="button"
             className="px-2.5 py-1.5 text-sm border rounded-md hover:bg-slate-50 disabled:opacity-50"
@@ -583,7 +583,7 @@ export default function DynamicToolPage() {
         </div>
 
         {/* Zoom */}
-        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto sm:justify-end">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto sm:justify-end">
           <button
             type="button"
             className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"

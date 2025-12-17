@@ -5,20 +5,39 @@ import * as pdfjsLib from "pdfjs-dist";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
+// ✅ Cache PDF document by fileUrl (avoid re-downloading for every thumbnail)
+const pdfDocCache = new Map<string, Promise<any>>();
+
+function getPdfDoc(fileUrl: string) {
+  let p = pdfDocCache.get(fileUrl);
+  if (!p) {
+    const loadingTask = pdfjsLib.getDocument({
+      url: fileUrl,
+      withCredentials: false,
+    });
+    p = loadingTask.promise;
+    pdfDocCache.set(fileUrl, p);
+  }
+  return p;
+}
+
 type Props = {
   fileUrl: string;
 
-  // ✅ 新增：用 0-based pageIndex（page.tsx 會傳這個）
-  pageIndex?: number;
+  // render page
+  pageIndex?: number; // 0-based
+  pageNumber?: number; // 1-based fallback
 
-  // ✅ 兼容舊用法：如果外面仍用 pageNumber（1-based）
-  pageNumber?: number;
-
-  // ✅ 新增：回報總頁數
+  // callbacks
   onPageCount?: (pageCount: number) => void;
-
   onPageSize?: (size: { width: number; height: number; scale: number }) => void;
+
+  // main scale (only for mode="main")
   scale?: number;
+
+  // ✅ NEW: modes
+  mode?: "main" | "thumbnail";
+  thumbWidth?: number; // px, only for thumbnail
 };
 
 export default function PdfViewer({
@@ -28,10 +47,11 @@ export default function PdfViewer({
   pageIndex,
   pageNumber = 1,
   scale = 1.2,
+  mode = "main",
+  thumbWidth = 110,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // ✅ 用 ref 保存 callbacks
   const onPageSizeRef = useRef<Props["onPageSize"]>(onPageSize);
   const onPageCountRef = useRef<Props["onPageCount"]>(onPageCount);
 
@@ -46,7 +66,6 @@ export default function PdfViewer({
   useEffect(() => {
     let cancelled = false;
     let renderTask: any = null;
-    let loadingTask: any = null;
 
     const run = async () => {
       try {
@@ -56,39 +75,45 @@ export default function PdfViewer({
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        // ✅ 取消上一個 render
+        // cancel previous render
         try {
           if (renderTask?.cancel) renderTask.cancel();
         } catch {}
 
-        loadingTask = pdfjsLib.getDocument({
-          url: fileUrl,
-          withCredentials: false,
-        });
-
-        const pdf = await loadingTask.promise;
+        const pdf = await getPdfDoc(fileUrl);
         if (cancelled) return;
 
-        // ✅ 回報總頁數
         onPageCountRef.current?.(pdf.numPages);
 
-        // ✅ 決定要 render 哪一頁（優先 pageIndex，其次 pageNumber）
         let pn =
           typeof pageIndex === "number" ? pageIndex + 1 : Number(pageNumber || 1);
-
         if (!Number.isFinite(pn)) pn = 1;
         pn = Math.max(1, Math.min(pn, pdf.numPages));
 
         const page = await pdf.getPage(pn);
         if (cancelled) return;
 
-        const viewport = page.getViewport({ scale });
+        // ✅ compute viewport
+        // - main: use given scale
+        // - thumbnail: compute a scale that fits thumbWidth
+        let viewport = page.getViewport({ scale: 1 });
+        let finalScale = scale;
 
-        onPageSizeRef.current?.({
-          width: Math.floor(viewport.width),
-          height: Math.floor(viewport.height),
-          scale,
-        });
+        if (mode === "thumbnail") {
+          const baseW = viewport.width || 1;
+          finalScale = Math.max(0.05, thumbWidth / baseW);
+        }
+
+        viewport = page.getViewport({ scale: finalScale });
+
+        // only notify page size in main mode (avoid spam for thumbnails)
+        if (mode === "main") {
+          onPageSizeRef.current?.({
+            width: Math.floor(viewport.width),
+            height: Math.floor(viewport.height),
+            scale: finalScale,
+          });
+        }
 
         const dpr =
           typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -96,6 +121,7 @@ export default function PdfViewer({
         canvas.width = Math.floor(viewport.width * dpr);
         canvas.height = Math.floor(viewport.height * dpr);
 
+        // overlay uses CSS px coordinate system
         canvas.style.width = `${Math.floor(viewport.width)}px`;
         canvas.style.height = `${Math.floor(viewport.height)}px`;
 
@@ -124,11 +150,15 @@ export default function PdfViewer({
       try {
         if (renderTask?.cancel) renderTask.cancel();
       } catch {}
-      try {
-        if (loadingTask?.destroy) loadingTask.destroy();
-      } catch {}
+      // ✅ no destroy() here: doc is cached to speed thumbnails
     };
-  }, [fileUrl, pageIndex, pageNumber, scale]);
+  }, [fileUrl, pageIndex, pageNumber, scale, mode, thumbWidth]);
 
-  return <canvas ref={canvasRef} className="border rounded-md block" />;
+  // thumbnail: no border (page.tsx already puts border around the button)
+  const className =
+    mode === "thumbnail"
+      ? "block"
+      : "border rounded-md block";
+
+  return <canvas ref={canvasRef} className={className} />;
 }

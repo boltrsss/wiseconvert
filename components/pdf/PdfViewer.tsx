@@ -21,7 +21,7 @@ export default function PdfViewer({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // ✅ 用 ref 保存 callback，避免 callback 變動觸發重新 render/cancel
-  const onPageSizeRef = useRef(onPageSize);
+  const onPageSizeRef = useRef<Props["onPageSize"]>(onPageSize);
   useEffect(() => {
     onPageSizeRef.current = onPageSize;
   }, [onPageSize]);
@@ -38,6 +38,11 @@ export default function PdfViewer({
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
+
+        // ✅ 取消上一個 render（避免疊加 & RenderingCancelledException 刷屏）
+        try {
+          if (renderTask?.cancel) renderTask.cancel();
+        } catch {}
 
         loadingTask = pdfjsLib.getDocument({
           url: fileUrl,
@@ -65,21 +70,21 @@ export default function PdfViewer({
         canvas.width = Math.floor(viewport.width * dpr);
         canvas.height = Math.floor(viewport.height * dpr);
 
+        // ✅ overlay 用 CSS px 當座標系統（很重要）
         canvas.style.width = `${Math.floor(viewport.width)}px`;
         canvas.style.height = `${Math.floor(viewport.height)}px`;
 
+        // ✅ reset transform（避免重 render 累積）
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        // ✅ 設成 dpr scale（讓 viewport 用 CSS px render）
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        // ✅ 同一張 canvas 重畫前，先取消上一個 render（避免疊加）
-        try {
-          if (renderTask?.cancel) renderTask.cancel();
-        } catch {}
-
+        // ✅ 補回 canvas 參數（避免某些環境畫不出來/不一致）
         renderTask = page.render({
           canvasContext: ctx,
+          canvas, // ✅ 這行是關鍵
           viewport,
         });
 

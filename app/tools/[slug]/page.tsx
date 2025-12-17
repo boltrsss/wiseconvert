@@ -420,7 +420,7 @@ export default function DynamicToolPage() {
       </header>
 
       {/* File upload */}
-      <section className="p-4 border rounded-xl space-y-3">
+      <section className="p-4 border rounded-xl space-y-3 relative isolate">
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="font-semibold text-lg">
@@ -528,7 +528,7 @@ export default function DynamicToolPage() {
             {/* ✅ PDF Crop Preview */}
 {tool.slug === "pdf-crop" && previewUrl && (
   <section className="p-4 border rounded-xl space-y-3">
-   <div className="sticky top-0 z-30 bg-white/95 backdrop-blur flex items-center justify-between gap-2 -mx-4 px-4 py-2 border-b">
+   <div className="sticky top-0 z-50 bg-white/95 backdrop-blur flex items-center justify-between gap-2 -mx-4 px-4 py-2 border-b">
       <h2 className="font-semibold text-lg">裁切</h2>
 
       {/* ✅ 右上角工具列（mobile 兩行） */}
@@ -710,17 +710,15 @@ export default function DynamicToolPage() {
       {/* Main canvas */}
       <div className="flex-1 min-w-0">
         <div
-          ref={cropWrapRef}
-          className="border rounded-md overflow-auto bg-white"
-          style={{ maxHeight: "70vh" }}
+        ref={cropWrapRef}
+        className="border rounded-md overflow-auto bg-white relative z-0"
+        style={{ maxHeight: "70vh" }}
         >
           <div
-            className="relative"
-            style={{
-              width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
-              height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
-            }}
+            className="relative z-0"
+            style={{ ... }}
           >
+
             <PdfViewer
               fileUrl={previewUrl}
               scale={pdfScale}

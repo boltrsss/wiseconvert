@@ -526,7 +526,7 @@ export default function DynamicToolPage() {
       {tool.slug === "pdf-crop" && previewUrl && (
         <section className="p-4 border rounded-xl space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-semibold text-lg">2. 裁切</h2>
+            <h2 className="font-semibold text-lg">裁切</h2>
 
             {/* ✅ 右上角工具列 */}
             <div className="flex items-center gap-2 flex-wrap justify-end">

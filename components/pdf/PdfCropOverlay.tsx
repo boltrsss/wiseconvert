@@ -96,39 +96,42 @@ export default function PdfCropOverlay({ pageWidth, pageHeight, value, onChange 
   const handleSize = 18;
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: value.x,
-        top: value.y,
-        width: value.w,
-        height: value.h,
-        border: "2px solid #2563eb",
-        background: "rgba(37, 99, 235, 0.10)",
-        boxSizing: "border-box",
-        touchAction: "none",
-      }}
-      onPointerDown={beginMove}
-      onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-    >
-      {handles.map((h) => (
-        <div
-          key={h.dir}
-          onPointerDown={beginResize(h.dir)}
-          style={{
-            position: "absolute",
-            width: handleSize,
-            height: handleSize,
-            background: "#fff",
-            border: "2px solid #2563eb",
-            borderRadius: 6,
-            touchAction: "none",
-            ...h.style,
-          }}
-        />
-      ))}
-    </div>
-  );
+  <div
+    style={{
+      position: "absolute",
+      left: value.x,
+      top: value.y,
+      width: value.w,
+      height: value.h,
+      border: "2px solid #2563eb",
+      background: "rgba(37, 99, 235, 0.10)",
+      boxSizing: "border-box",
+      touchAction: "none",
+      zIndex: 20, // ✅ 保證 overlay 在 PDF canvas 上面
+    }}
+    onPointerDown={beginMove}
+    onPointerMove={onPointerMove}
+    onPointerUp={endDrag}
+    onPointerCancel={endDrag}
+  >
+    {handles.map((h) => (
+      <div
+        key={h.dir}
+        onPointerDown={beginResize(h.dir)}
+        style={{
+          position: "absolute",
+          width: handleSize,
+          height: handleSize,
+          background: "#fff",
+          border: "2px solid #2563eb",
+          borderRadius: 6,
+          touchAction: "none",
+          zIndex: 30, // ✅ handles 再更上層，避免被蓋或不好點
+          ...h.style,
+        }}
+      />
+    ))}
+  </div>
+);
+
 }

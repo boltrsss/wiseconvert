@@ -662,7 +662,8 @@ export default function DynamicToolPage() {
         <div className="text-xs text-slate-500 mb-2">Pages</div>
 
         <div
-          className="border rounded-md bg-white overflow-x-auto overflow-y-hidden md:overflow-y-auto md:overflow-x-hidden"
+          ref={cropWrapRef}
+          className="border rounded-md overflow-auto bg-white relative z-0"
           style={{ maxHeight: "70vh" }}
         >
           <div className="p-2 flex md:block gap-2 md:space-y-2">
@@ -710,15 +711,17 @@ export default function DynamicToolPage() {
       {/* Main canvas */}
       <div className="flex-1 min-w-0">
         <div
-        ref={cropWrapRef}
-        className="border rounded-md overflow-auto bg-white relative z-0"
-        style={{ maxHeight: "70vh" }}
+          ref={cropWrapRef}
+          className="border rounded-md overflow-auto bg-white"
+          style={{ maxHeight: "70vh" }}
         >
           <div
             className="relative z-0"
-            style={{ ... }}
+            style={{
+              width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
+              height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
+            }}
           >
-
             <PdfViewer
               fileUrl={previewUrl}
               scale={pdfScale}

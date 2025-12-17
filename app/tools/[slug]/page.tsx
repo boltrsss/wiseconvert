@@ -92,7 +92,6 @@ export default function DynamicToolPage() {
   const cropWrapRef = useRef<HTMLDivElement | null>(null);
 
 
-
   // 取得工具 schema（slug 改變才重置）
   useEffect(() => {
     let cancelled = false;
@@ -176,7 +175,7 @@ export default function DynamicToolPage() {
 
 
   //pdf-fixcode
-    const handlePdfPageSize = React.useCallback(
+  const handlePdfPageSize = React.useCallback(
   (size: { width: number; height: number; scale: number }) => {
     setPdfSize({ width: size.width, height: size.height });
     setPdfScale(size.scale);
@@ -212,8 +211,6 @@ export default function DynamicToolPage() {
   },
   []
 );
-
-
   
   // ✅ 多檔工具：再選檔「追加」而不是覆蓋（且去重）
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -405,7 +402,8 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
     (status.file_url?.toLowerCase().includes(".zip") ||
       status.output_s3_key?.toLowerCase().endsWith(".zip"));
 
- const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
+  const actionLabel =
+    tool.slug === "pdf-merge" ? "開始合併" : "開始";
 
   return (
     <div className="max-w-3xl mx-auto py-10 px-5 space-y-8">
@@ -527,32 +525,6 @@ if (tool.slug === "pdf-crop" && cropRect && pdfSize) {
 {/* ✅ PDF Crop Preview */}
 
       {tool.slug === "pdf-crop" && previewUrl && (
-  <section className="p-4 border rounded-xl space-y-3">
-    <h2 className="font-semibold text-lg">2. 裁切預覽</h2>
-
-    <div className="border rounded-md overflow-auto" style={{ maxHeight: "70vh" }}>
-      <div
-        className="relative"
-        style={{
-          width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
-          height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
-        }}
-      >
-        <PdfViewer fileUrl={previewUrl} onPageSize={handlePdfPageSize} />
-
-        {pdfSize && cropRect && (
-          <PdfCropOverlay
-            pageWidth={pdfSize.width}
-            pageHeight={pdfSize.height}
-            value={cropRect}
-            onChange={setCropRect}
-          />
-        )}
-      </div>
-    </div>
-
-          {/* ✅ 連動數值面板（放在 section 內、提示文字上方） */}
-            {tool.slug === "pdf-crop" && previewUrl && (
   <section className="p-4 border rounded-xl space-y-3">
     <div className="flex items-center justify-between gap-2">
       <h2 className="font-semibold text-lg">2. 裁切</h2>

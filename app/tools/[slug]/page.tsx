@@ -475,99 +475,55 @@ export default function DynamicToolPage() {
       </section>
 
 {/* ✅ PDF Crop Preview */}
-{tool.slug === "pdf-crop" && previewUrl && (
+
+      {tool.slug === "pdf-crop" && previewUrl && (
   <section className="p-4 border rounded-xl space-y-3">
     <h2 className="font-semibold text-lg">2. 裁切預覽</h2>
 
-   <div
-  className="relative inline-block overflow-auto border rounded-md"
-  style={{ maxHeight: "70vh", maxWidth: "100%" }}>
-      <PdfViewer
-        fileUrl={previewUrl}
-        onPageSize={(size) => {
-          setPdfSize(size);
-          if (!cropRect) {
-            setCropRect({
-            x: 0,
-            y: 0,
-            w: size.width,
-            h: size.height,
-          });
-
-          }
+    <div className="border rounded-md overflow-auto" style={{ maxHeight: "70vh" }}>
+      <div
+        className="relative"
+        style={{
+          width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
+          height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
         }}
-      />
+      >
+        <PdfViewer
+          fileUrl={previewUrl}
+          onPageSize={(size) => {
+            setPdfSize({ width: size.width, height: size.height });
 
-      {pdfSize && cropRect && (
-        <PdfCropOverlay
-          pageWidth={pdfSize.width}
-          pageHeight={pdfSize.height}
-          value={cropRect}
-          onChange={(rect) => setCropRect(rect)}
+            if (!cropRect) {
+              // ✅ 初始不要滿版，手機才看得到邊界
+              const mx = Math.round(size.width * 0.08);
+              const my = Math.round(size.height * 0.08);
+              setCropRect({
+                x: mx,
+                y: my,
+                w: size.width - mx * 2,
+                h: size.height - my * 2,
+              });
+            }
+          }}
         />
-      )}
+
+        {pdfSize && cropRect && (
+          <PdfCropOverlay
+            pageWidth={pdfSize.width}
+            pageHeight={pdfSize.height}
+            value={cropRect}
+            onChange={setCropRect}
+          />
+        )}
+      </div>
     </div>
 
     <div className="text-xs text-slate-500">
       拖曳滑鼠選取裁切區域，完成後按「開始」才會真正裁切 PDF。
     </div>
-
-{cropRect && (
-  <div className="grid grid-cols-2 gap-3 text-sm">
-    <div>
-      <label className="block text-xs text-slate-500">X</label>
-      <input
-        type="number"
-        className="border rounded px-2 py-1 w-full"
-        value={cropRect.x}
-        onChange={(e) =>
-          setCropRect({ ...cropRect, x: Number(e.target.value) })
-        }
-      />
-    </div>
-
-    <div>
-      <label className="block text-xs text-slate-500">Y</label>
-      <input
-        type="number"
-        className="border rounded px-2 py-1 w-full"
-        value={cropRect.y}
-        onChange={(e) =>
-          setCropRect({ ...cropRect, y: Number(e.target.value) })
-        }
-      />
-    </div>
-
-    <div>
-      <label className="block text-xs text-slate-500">Width</label>
-      <input
-        type="number"
-        className="border rounded px-2 py-1 w-full"
-        value={cropRect.w}
-        onChange={(e) =>
-          setCropRect({ ...cropRect, w: Number(e.target.value) })
-        }
-      />
-    </div>
-
-    <div>
-      <label className="block text-xs text-slate-500">Height</label>
-      <input
-        type="number"
-        className="border rounded px-2 py-1 w-full"
-        value={cropRect.h}
-        onChange={(e) =>
-          setCropRect({ ...cropRect, h: Number(e.target.value) })
-        }
-      />
-    </div>
-  </div>
-)}
-
-
-    
   </section>
 )}
+
 
 
             {/* Output format */}

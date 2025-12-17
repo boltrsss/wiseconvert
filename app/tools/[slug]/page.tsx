@@ -91,6 +91,9 @@ export default function DynamicToolPage() {
   const [pageIndex, setPageIndex] = useState(0); // 0-based
   const [pageCount, setPageCount] = useState(1);
   const [applyTo, setApplyTo] = useState<"all" | "first">("all");
+    // thumbnails
+  const THUMB_WIDTH = 110;
+  const THUMB_MAX = 40; // 太多頁先限制，避免一次渲染爆炸
 
   // 取得工具 schema（slug 改變才重置）
   useEffect(() => {
@@ -522,7 +525,7 @@ export default function DynamicToolPage() {
         )}
       </section>
 
-      {/* ✅ PDF Crop Preview */}
+            {/* ✅ PDF Crop Preview */}
       {tool.slug === "pdf-crop" && previewUrl && (
         <section className="p-4 border rounded-xl space-y-3">
           <div className="flex items-center justify-between gap-2">
@@ -530,7 +533,7 @@ export default function DynamicToolPage() {
 
             {/* ✅ 右上角工具列 */}
             <div className="flex items-center gap-2 flex-wrap justify-end">
-              {/* ✅ NEW: Page + Apply to */}
+              {/* Page + Apply to */}
               <div className="flex items-center gap-2 mr-2">
                 <button
                   type="button"
@@ -648,67 +651,127 @@ export default function DynamicToolPage() {
             </div>
           </div>
 
-          <div
-            ref={cropWrapRef}
-            className="border rounded-md overflow-auto bg-white"
-            style={{ maxHeight: "70vh" }}
-          >
-            <div
-              className="relative"
-              style={{
-                width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
-                height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
-              }}
-            >
-              <PdfViewer
-                fileUrl={previewUrl}
-                scale={pdfScale}
-                pageIndex={pageIndex} // ✅ NEW
-                onPageCount={(n) => {
-                  setPageCount(n || 1);
-                  // clamp pageIndex
-                  setPageIndex((p) => Math.min(Math.max(p, 0), Math.max((n || 1) - 1, 0)));
-                }}
-                onPageSize={handlePdfPageSize}
-              />
+          {/* ✅ 左側縮圖 + 右側主畫布 */}
+          <div className="flex gap-3">
+            {/* Thumbnails */}
+            <div className="w-[130px] shrink-0">
+              <div className="text-xs text-slate-500 mb-2">Pages</div>
 
-              {pdfSize && cropRect && (
-                <PdfCropOverlay
-                  pageWidth={pdfSize.width}
-                  pageHeight={pdfSize.height}
-                  value={cropRect}
-                  onChange={setCropRect}
-                />
+              <div
+                className="border rounded-md bg-white overflow-auto"
+                style={{ maxHeight: "70vh" }}
+              >
+                <div className="p-2 space-y-2">
+                  {Array.from({ length: Math.min(pageCount, THUMB_MAX) }).map((_, i) => {
+                    const active = i === pageIndex;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setPageIndex(i)}
+                        className={`
+                          w-full text-left rounded-md border p-1 bg-white
+                          hover:bg-slate-50 transition
+                          ${active ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200"}
+                        `}
+                        title={`Page ${i + 1}`}
+                      >
+                        <div className="flex items-center justify-between px-1 pb-1">
+                          <span className={`text-xs ${active ? "text-blue-700" : "text-slate-600"}`}>
+                            {i + 1}
+                          </span>
+                        </div>
+
+                        {/* ✅ 縮圖 canvas（靠 PdfViewer 的 thumbnail mode） */}
+                        <div className="flex justify-center">
+                          <PdfViewer
+                            fileUrl={previewUrl}
+                            pageIndex={i}
+                            mode="thumbnail"
+                            thumbWidth={THUMB_WIDTH}
+                          />
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {pageCount > THUMB_MAX && (
+                    <div className="text-[11px] text-slate-500 px-1 pt-1">
+                      只顯示前 {THUMB_MAX} 頁（共 {pageCount} 頁）
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Main canvas */}
+            <div className="flex-1 min-w-0">
+              <div
+                ref={cropWrapRef}
+                className="border rounded-md overflow-auto bg-white"
+                style={{ maxHeight: "70vh" }}
+              >
+                <div
+                  className="relative"
+                  style={{
+                    width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
+                    height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
+                  }}
+                >
+                  <PdfViewer
+                    fileUrl={previewUrl}
+                    scale={pdfScale}
+                    pageIndex={pageIndex}
+                    onPageCount={(n) => {
+                      setPageCount(n || 1);
+                      setPageIndex((p) =>
+                        Math.min(Math.max(p, 0), Math.max((n || 1) - 1, 0))
+                      );
+                    }}
+                    onPageSize={handlePdfPageSize}
+                    mode="main"
+                  />
+
+                  {pdfSize && cropRect && (
+                    <PdfCropOverlay
+                      pageWidth={pdfSize.width}
+                      pageHeight={pdfSize.height}
+                      value={cropRect}
+                      onChange={setCropRect}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {cropRect && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm mt-3">
+                  <div className="px-3 py-2 border rounded-md bg-slate-50">
+                    <div className="text-xs text-slate-500">X</div>
+                    <div className="tabular-nums">{cropRect.x}</div>
+                  </div>
+                  <div className="px-3 py-2 border rounded-md bg-slate-50">
+                    <div className="text-xs text-slate-500">Y</div>
+                    <div className="tabular-nums">{cropRect.y}</div>
+                  </div>
+                  <div className="px-3 py-2 border rounded-md bg-slate-50">
+                    <div className="text-xs text-slate-500">W</div>
+                    <div className="tabular-nums">{cropRect.w}</div>
+                  </div>
+                  <div className="px-3 py-2 border rounded-md bg-slate-50">
+                    <div className="text-xs text-slate-500">H</div>
+                    <div className="tabular-nums">{cropRect.h}</div>
+                  </div>
+                </div>
               )}
-            </div>
-          </div>
 
-          {cropRect && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-              <div className="px-3 py-2 border rounded-md bg-slate-50">
-                <div className="text-xs text-slate-500">X</div>
-                <div className="tabular-nums">{cropRect.x}</div>
-              </div>
-              <div className="px-3 py-2 border rounded-md bg-slate-50">
-                <div className="text-xs text-slate-500">Y</div>
-                <div className="tabular-nums">{cropRect.y}</div>
-              </div>
-              <div className="px-3 py-2 border rounded-md bg-slate-50">
-                <div className="text-xs text-slate-500">W</div>
-                <div className="tabular-nums">{cropRect.w}</div>
-              </div>
-              <div className="px-3 py-2 border rounded-md bg-slate-50">
-                <div className="text-xs text-slate-500">H</div>
-                <div className="tabular-nums">{cropRect.h}</div>
+              <div className="text-xs text-slate-500 mt-2">
+                直接拖曳與拉角落調整裁切區域。按「開始」才會真正裁切 PDF。
               </div>
             </div>
-          )}
-
-          <div className="text-xs text-slate-500">
-            直接拖曳與拉角落調整裁切區域。按「開始」才會真正裁切 PDF。
           </div>
         </section>
       )}
+
 
       {/* Output format */}
       {tool.output_formats && tool.output_formats.length > 0 && (

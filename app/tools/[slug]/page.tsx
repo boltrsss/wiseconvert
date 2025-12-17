@@ -413,7 +413,7 @@ export default function DynamicToolPage() {
   const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
 
   return (
-    <div className="max-w-3xl mx-auto py-10 px-5 space-y-8">
+    <div className="max-w-[1200px] mx-auto py-10 px-5 space-y-8">
       <header>
         <h1 className="text-3xl font-bold">{tool.name}</h1>
         <p className="text-slate-600 mt-2">{tool.description}</p>
@@ -663,10 +663,10 @@ export default function DynamicToolPage() {
 
         <div
           ref={cropWrapRef}
-          className="border rounded-md overflow-auto bg-white relative z-0"
+          className="border rounded-md overflow-auto bg-white relative z-0 p-2"
           style={{ maxHeight: "70vh" }}
         >
-          <div className="p-2 flex md:block gap-2 md:space-y-2 items-start">
+          <div className="flex md:block gap-2 md:space-y-2 items-start">
             {Array.from({ length: Math.min(pageCount, THUMB_MAX) }).map((_, i) => {
               const active = i === pageIndex;
 
@@ -677,7 +677,7 @@ export default function DynamicToolPage() {
                   onClick={() => setPageIndex(i)}
                   className={[
                     "self-start inline-flex flex-col shrink-0 md:w-full w-[120px] text-left rounded-md border p-1 bg-white hover:bg-slate-50 transition",
-                    active ? "border-blue-600 ring-2 ring-blue-600 ring-inset" : "border-slate-200"
+                    active ? "border-blue-600 ring-2 ring-blue-600 : "border-slate-200"
                   ].join(" ")}
                   title={`Page ${i + 1}`}
                 >

@@ -526,257 +526,253 @@ export default function DynamicToolPage() {
       </section>
 
             {/* ✅ PDF Crop Preview */}
-      {tool.slug === "pdf-crop" && previewUrl && (
-        <section className="p-4 border rounded-xl space-y-3">
-          <div className="flex items-center justify-between gap-2 relative z-20">
-            <h2 className="font-semibold text-lg">裁切</h2>
+{tool.slug === "pdf-crop" && previewUrl && (
+  <section className="p-4 border rounded-xl space-y-3">
+    <div className="flex items-center justify-between gap-2 relative z-20">
+      <h2 className="font-semibold text-lg">裁切</h2>
 
-            {/* ✅ 右上角工具列 */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:flex-wrap sm:justify-end">
-              {/* Page + Apply to */}
-              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto sm:mr-2">
-                <button
-                  type="button"
-                  className="px-2.5 py-1.5 text-sm border rounded-md hover:bg-slate-50 disabled:opacity-50"
-                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-                  disabled={pageIndex <= 0}
-                >
-                  Prev
-                </button>
-
-                <div className="flex items-center gap-2 text-sm">
-                  <span>Page</span>
-                  <input
-                    className="w-16 px-2 py-1.5 rounded-md border"
-                    type="number"
-                    min={1}
-                    max={pageCount}
-                    value={pageIndex + 1}
-                    onChange={(e) => {
-                      const v = Number(e.target.value || 1);
-                      const next = Math.min(Math.max(v, 1), pageCount) - 1;
-                      setPageIndex(next);
-                    }}
-                  />
-                  <span className="text-slate-500">/ {pageCount}</span>
-                </div>
-
-                <button
-                  type="button"
-                  className="px-2.5 py-1.5 text-sm border rounded-md hover:bg-slate-50 disabled:opacity-50"
-                  onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
-                  disabled={pageIndex >= pageCount - 1}
-                >
-                  Next
-                </button>
-
-                <select
-                  className="px-2.5 py-1.5 text-sm border rounded-md bg-white"
-                  value={applyTo}
-                  onChange={(e) => setApplyTo(e.target.value as "all" | "first")}
-                  title="Apply crop to..."
-                >
-                  <option value="all">All pages</option>
-                  <option value="first">This page only</option>
-                </select>
-              </div>
-
-              {/* Zoom */}
-              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto sm:justify-end">
-              <button
-                type="button"
-                className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
-                onClick={() =>
-                  setPdfScale((s) => Math.max(0.6, Math.round((s - 0.1) * 10) / 10))
-                }
-              >
-                −
-              </button>
-
-              <div className="text-sm tabular-nums w-14 text-center">
-                {Math.round(pdfScale * 100)}%
-              </div>
-
-              <button
-                type="button"
-                className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
-                onClick={() =>
-                  setPdfScale((s) => Math.min(2.2, Math.round((s + 0.1) * 10) / 10))
-                }
-              >
-                +
-              </button>
-
-              <button
-                type="button"
-                className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
-                onClick={() => {
-                  const el = cropWrapRef.current;
-                  if (!el || !pdfSize) return;
-                  const cw = el.clientWidth - 16;
-                  const ratio = cw / pdfSize.width;
-                  setPdfScale((s) => {
-                    const next = s * ratio;
-                    return Math.max(0.6, Math.min(2.2, Math.round(next * 10) / 10));
-                  });
-                }}
-              >
-                Fit
-              </button>
-
-              <button
-                type="button"
-                className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
-                onClick={() => {
-                  if (!pdfSize) return;
-                  const w = Math.round(pdfSize.width * 0.5);
-                  const h = Math.round(pdfSize.height * 0.5);
-                  const x = Math.round((pdfSize.width - w) / 2);
-                  const y = Math.round((pdfSize.height - h) / 2);
-                  setCropRect({ x, y, w, h });
-                }}
-              >
-                Reset
-              </button>
-
-              <button
-                type="button"
-                className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
-                onClick={() => {
-                  if (!pdfSize) return;
-                  setCropRect({ x: 0, y: 0, w: pdfSize.width, h: pdfSize.height });
-                }}
-              >
-                Full
-              </button>
-            </div>
-          </div>
-        </dib>
-          {/* ✅ 左側縮圖 + 右側主畫布 */}
-          <div className="flex flex-col md:flex-row gap-3">
-            {/* Thumbnails */}
-<div className="md:w-[130px] md:shrink-0 w-full">
-  <div className="text-xs text-slate-500 mb-2">Pages</div>
-
-  <div
-    className="
-      border rounded-md bg-white
-      overflow-x-auto overflow-y-hidden md:overflow-y-auto md:overflow-x-hidden
-    "
-    style={{ maxHeight: "70vh" }}
-  >
-    {/* ✅ mobile: 橫向; desktop: 直向 */}
-    <div className="p-2 flex md:block gap-2 md:space-y-2">
-      {Array.from({ length: Math.min(pageCount, THUMB_MAX) }).map((_, i) => {
-        const active = i === pageIndex;
-        return (
+      {/* ✅ 右上角工具列（mobile 兩行） */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:flex-wrap sm:justify-end">
+        {/* Page + Apply */}
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto sm:mr-2">
           <button
-            key={i}
             type="button"
-            onClick={() => setPageIndex(i)}
-            className={`
-              shrink-0 md:w-full w-[120px]
-              text-left rounded-md border p-1 bg-white
-              hover:bg-slate-50 transition
-              ${active ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200"}
-            `}
-            title={`Page ${i + 1}`}
+            className="px-2.5 py-1.5 text-sm border rounded-md hover:bg-slate-50 disabled:opacity-50"
+            onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+            disabled={pageIndex <= 0}
           >
-            <div className="flex items-center justify-between px-1 pb-1">
-              <span className={`text-xs ${active ? "text-blue-700" : "text-slate-600"}`}>
-                {i + 1}
-              </span>
-            </div>
-
-            <div className="flex justify-center">
-              <PdfViewer
-                fileUrl={previewUrl}
-                pageIndex={i}
-                mode="thumbnail"
-                thumbWidth={THUMB_WIDTH}
-              />
-            </div>
+            Prev
           </button>
-        );
-      })}
 
-      {pageCount > THUMB_MAX && (
-        <div className="text-[11px] text-slate-500 px-1 pt-1">
-          只顯示前 {THUMB_MAX} 頁（共 {pageCount} 頁）
+          <div className="flex items-center gap-2 text-sm">
+            <span>Page</span>
+            <input
+              className="w-16 px-2 py-1.5 rounded-md border"
+              type="number"
+              min={1}
+              max={pageCount}
+              value={pageIndex + 1}
+              onChange={(e) => {
+                const v = Number(e.target.value || 1);
+                const next = Math.min(Math.max(v, 1), pageCount) - 1;
+                setPageIndex(next);
+              }}
+            />
+            <span className="text-slate-500">/ {pageCount}</span>
+          </div>
+
+          <button
+            type="button"
+            className="px-2.5 py-1.5 text-sm border rounded-md hover:bg-slate-50 disabled:opacity-50"
+            onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+            disabled={pageIndex >= pageCount - 1}
+          >
+            Next
+          </button>
+
+          {/* ✅ z-index，避免被 PDF 蓋住 */}
+          <select
+            className="px-2.5 py-1.5 text-sm border rounded-md bg-white relative z-30"
+            value={applyTo}
+            onChange={(e) => setApplyTo(e.target.value as "all" | "first")}
+            title="Apply crop to..."
+          >
+            <option value="all">All pages</option>
+            <option value="first">This page only</option>
+          </select>
         </div>
-      )}
+
+        {/* Zoom */}
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto sm:justify-end">
+          <button
+            type="button"
+            className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+            onClick={() =>
+              setPdfScale((s) => Math.max(0.6, Math.round((s - 0.1) * 10) / 10))
+            }
+          >
+            −
+          </button>
+
+          <div className="text-sm tabular-nums w-14 text-center">
+            {Math.round(pdfScale * 100)}%
+          </div>
+
+          <button
+            type="button"
+            className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+            onClick={() =>
+              setPdfScale((s) => Math.min(2.2, Math.round((s + 0.1) * 10) / 10))
+            }
+          >
+            +
+          </button>
+
+          <button
+            type="button"
+            className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+            onClick={() => {
+              const el = cropWrapRef.current;
+              if (!el || !pdfSize) return;
+              const cw = el.clientWidth - 16;
+              const ratio = cw / pdfSize.width;
+              setPdfScale((s) => {
+                const next = s * ratio;
+                return Math.max(0.6, Math.min(2.2, Math.round(next * 10) / 10));
+              });
+            }}
+          >
+            Fit
+          </button>
+
+          <button
+            type="button"
+            className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+            onClick={() => {
+              if (!pdfSize) return;
+              const w = Math.round(pdfSize.width * 0.5);
+              const h = Math.round(pdfSize.height * 0.5);
+              const x = Math.round((pdfSize.width - w) / 2);
+              const y = Math.round((pdfSize.height - h) / 2);
+              setCropRect({ x, y, w, h });
+            }}
+          >
+            Reset
+          </button>
+
+          <button
+            type="button"
+            className="px-3 py-1.5 text-sm border rounded-md hover:bg-slate-50"
+            onClick={() => {
+              if (!pdfSize) return;
+              setCropRect({ x: 0, y: 0, w: pdfSize.width, h: pdfSize.height });
+            }}
+          >
+            Full
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
+    {/* ✅ 左側縮圖 + 右側主畫布 */}
+    <div className="flex flex-col md:flex-row gap-3">
+      {/* Thumbnails */}
+      <div className="md:w-[130px] md:shrink-0 w-full">
+        <div className="text-xs text-slate-500 mb-2">Pages</div>
 
-            {/* Main canvas */}
-            <div className="flex-1 min-w-0">
-              <div
-                ref={cropWrapRef}
-                className="border rounded-md overflow-auto bg-white"
-                style={{ maxHeight: "70vh" }}
-              >
-                <div
-                  className="relative"
-                  style={{
-                    width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
-                    height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
-                  }}
+        <div
+          className="border rounded-md bg-white overflow-x-auto overflow-y-hidden md:overflow-y-auto md:overflow-x-hidden"
+          style={{ maxHeight: "70vh" }}
+        >
+          <div className="p-2 flex md:block gap-2 md:space-y-2">
+            {Array.from({ length: Math.min(pageCount, THUMB_MAX) }).map((_, i) => {
+              const active = i === pageIndex;
+
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setPageIndex(i)}
+                  className={[
+                    "shrink-0 md:w-full w-[120px] text-left rounded-md border p-1 bg-white hover:bg-slate-50 transition",
+                    active ? "border-blue-600 ring-1 ring-blue-600" : "border-slate-200",
+                  ].join(" ")}
+                  title={`Page ${i + 1}`}
                 >
-                  <PdfViewer
-                    fileUrl={previewUrl}
-                    scale={pdfScale}
-                    pageIndex={pageIndex}
-                    onPageCount={(n) => {
-                      setPageCount(n || 1);
-                      setPageIndex((p) =>
-                        Math.min(Math.max(p, 0), Math.max((n || 1) - 1, 0))
-                      );
-                    }}
-                    onPageSize={handlePdfPageSize}
-                    mode="main"
-                  />
+                  <div className="flex items-center justify-between px-1 pb-1">
+                    <span className={["text-xs", active ? "text-blue-700" : "text-slate-600"].join(" ")}>
+                      {i + 1}
+                    </span>
+                  </div>
 
-                  {pdfSize && cropRect && (
-                    <PdfCropOverlay
-                      pageWidth={pdfSize.width}
-                      pageHeight={pdfSize.height}
-                      value={cropRect}
-                      onChange={setCropRect}
+                  <div className="flex justify-center">
+                    <PdfViewer
+                      fileUrl={previewUrl}
+                      pageIndex={i}
+                      mode="thumbnail"
+                      thumbWidth={THUMB_WIDTH}
                     />
-                  )}
-                </div>
-              </div>
+                  </div>
+                </button>
+              );
+            })}
 
-              {cropRect && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm mt-3">
-                  <div className="px-3 py-2 border rounded-md bg-slate-50">
-                    <div className="text-xs text-slate-500">X</div>
-                    <div className="tabular-nums">{cropRect.x}</div>
-                  </div>
-                  <div className="px-3 py-2 border rounded-md bg-slate-50">
-                    <div className="text-xs text-slate-500">Y</div>
-                    <div className="tabular-nums">{cropRect.y}</div>
-                  </div>
-                  <div className="px-3 py-2 border rounded-md bg-slate-50">
-                    <div className="text-xs text-slate-500">W</div>
-                    <div className="tabular-nums">{cropRect.w}</div>
-                  </div>
-                  <div className="px-3 py-2 border rounded-md bg-slate-50">
-                    <div className="text-xs text-slate-500">H</div>
-                    <div className="tabular-nums">{cropRect.h}</div>
-                  </div>
-                </div>
-              )}
-
-              <div className="text-xs text-slate-500 mt-2">
-                直接拖曳與拉角落調整裁切區域。按「開始」才會真正裁切 PDF。
+            {pageCount > THUMB_MAX && (
+              <div className="text-[11px] text-slate-500 px-1 pt-1">
+                只顯示前 {THUMB_MAX} 頁（共 {pageCount} 頁）
               </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main canvas */}
+      <div className="flex-1 min-w-0">
+        <div
+          ref={cropWrapRef}
+          className="border rounded-md overflow-auto bg-white"
+          style={{ maxHeight: "70vh" }}
+        >
+          <div
+            className="relative"
+            style={{
+              width: pdfSize?.width ? `${pdfSize.width}px` : undefined,
+              height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
+            }}
+          >
+            <PdfViewer
+              fileUrl={previewUrl}
+              scale={pdfScale}
+              pageIndex={pageIndex}
+              onPageCount={(n) => {
+                setPageCount(n || 1);
+                setPageIndex((p) =>
+                  Math.min(Math.max(p, 0), Math.max((n || 1) - 1, 0))
+                );
+              }}
+              onPageSize={handlePdfPageSize}
+              mode="main"
+            />
+
+            {pdfSize && cropRect && (
+              <PdfCropOverlay
+                pageWidth={pdfSize.width}
+                pageHeight={pdfSize.height}
+                value={cropRect}
+                onChange={setCropRect}
+              />
+            )}
+          </div>
+        </div>
+
+        {cropRect && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm mt-3">
+            <div className="px-3 py-2 border rounded-md bg-slate-50">
+              <div className="text-xs text-slate-500">X</div>
+              <div className="tabular-nums">{cropRect.x}</div>
+            </div>
+            <div className="px-3 py-2 border rounded-md bg-slate-50">
+              <div className="text-xs text-slate-500">Y</div>
+              <div className="tabular-nums">{cropRect.y}</div>
+            </div>
+            <div className="px-3 py-2 border rounded-md bg-slate-50">
+              <div className="text-xs text-slate-500">W</div>
+              <div className="tabular-nums">{cropRect.w}</div>
+            </div>
+            <div className="px-3 py-2 border rounded-md bg-slate-50">
+              <div className="text-xs text-slate-500">H</div>
+              <div className="tabular-nums">{cropRect.h}</div>
             </div>
           </div>
-        </section>
-      )}
+        )}
+
+        <div className="text-xs text-slate-500 mt-2">
+          直接拖曳與拉角落調整裁切區域。按「開始」才會真正裁切 PDF。
+        </div>
+      </div>
+    </div>
+  </section>
+)}
 
 
       {/* Output format */}

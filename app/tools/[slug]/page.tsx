@@ -170,6 +170,27 @@ export default function DynamicToolPage() {
     return settings[target] === expected;
   };
 
+
+  //pdf-fixcode
+  const handlePdfPageSize = React.useCallback(
+  (size: { width: number; height: number; scale: number }) => {
+    setPdfSize({ width: size.width, height: size.height });
+
+    // ✅ 第一次初始化 cropRect：不要全頁，先給 70% 並置中（手機才看得到邊界）
+    setCropRect((prev) => {
+      if (prev) return prev;
+      const w = Math.floor(size.width * 0.7);
+      const h = Math.floor(size.height * 0.7);
+      const x = Math.floor((size.width - w) / 2);
+      const y = Math.floor((size.height - h) / 2);
+      return { x, y, w, h };
+    });
+  },
+  []
+);
+
+
+  
   // ✅ 多檔工具：再選檔「追加」而不是覆蓋（且去重）
   const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!tool) return;
@@ -488,24 +509,7 @@ export default function DynamicToolPage() {
           height: pdfSize?.height ? `${pdfSize.height}px` : undefined,
         }}
       >
-        <PdfViewer
-          fileUrl={previewUrl}
-          onPageSize={(size) => {
-            setPdfSize({ width: size.width, height: size.height });
-
-            if (!cropRect) {
-              // ✅ 初始不要滿版，手機才看得到邊界
-              const mx = Math.round(size.width * 0.08);
-              const my = Math.round(size.height * 0.08);
-              setCropRect({
-                x: mx,
-                y: my,
-                w: size.width - mx * 2,
-                h: size.height - my * 2,
-              });
-            }
-          }}
-        />
+        <PdfViewer fileUrl={previewUrl} onPageSize={handlePdfPageSize} />
 
         {pdfSize && cropRect && (
           <PdfCropOverlay

@@ -2,150 +2,137 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type Crop = { x: number; y: number; w: number; h: number };
+type Crop = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
 
 type Props = {
   pageWidth: number;
   pageHeight: number;
   value: Crop;
   onChange: (c: Crop) => void;
-  minW?: number;
-  minH?: number;
 };
 
-type DragMode = "move" | "nw" | "ne" | "sw" | "se";
+type HandleDir = "nw" | "ne" | "sw" | "se";
 
-function clampRect(
+const clampRect = (
   r: Crop,
   pageW: number,
   pageH: number,
-  minW = 40,
-  minH = 40
-): Crop {
+  minW = 20,
+  minH = 20
+): Crop => {
+  let x = r.x;
+  let y = r.y;
   let w = Math.max(minW, r.w);
   let h = Math.max(minH, r.h);
 
+  // w/h 不超出頁面
   w = Math.min(w, pageW);
   h = Math.min(h, pageH);
 
-  let x = Math.max(0, Math.min(pageW - w, r.x));
-  let y = Math.max(0, Math.min(pageH - h, r.y));
+  // x/y 讓整個框都在頁內
+  x = Math.max(0, Math.min(pageW - w, x));
+  y = Math.max(0, Math.min(pageH - h, y));
 
   return { x, y, w, h };
-}
+};
 
 export default function PdfCropOverlay({
   pageWidth,
   pageHeight,
   value,
   onChange,
-  minW = 40,
-  minH = 40,
 }: Props) {
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  // drag or resize 狀態
+  const modeRef = useRef<null | { type: "drag" } | { type: "resize"; dir: HandleDir }>(null);
+  const startRef = useRef<null | { x: number; y: number; rect: Crop }>(null);
 
   const [dragging, setDragging] = useState(false);
-  const modeRef = useRef<DragMode>("move");
 
-  const startRef = useRef<{
-    startX: number;
-    startY: number;
-    rect: Crop;
-  } | null>(null);
-
-  const getLocalPoint = (clientX: number, clientY: number) => {
-    // parent 是 relative 容器（PdfViewer 外面那個 div）
-    const parent = wrapRef.current?.parentElement;
-    if (!parent) return { x: clientX, y: clientY };
-    const b = parent.getBoundingClientRect();
-    return {
-      x: clientX - b.left + parent.scrollLeft,
-      y: clientY - b.top + parent.scrollTop,
-    };
-  };
-
-  const begin = (e: React.MouseEvent, mode: DragMode) => {
+  const onMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
 
-    modeRef.current = mode;
-    setDragging(true);
+    const target = e.target as HTMLElement;
+    const handle = target.dataset.handle as HandleDir | undefined;
 
-    const p = getLocalPoint(e.clientX, e.clientY);
+    if (handle) {
+      modeRef.current = { type: "resize", dir: handle };
+    } else {
+      modeRef.current = { type: "drag" };
+    }
+
     startRef.current = {
-      startX: p.x,
-      startY: p.y,
+      x: e.clientX,
+      y: e.clientY,
       rect: { ...value },
     };
+
+    setDragging(true);
   };
 
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!dragging || !startRef.current) return;
+  const onMouseMove = (e: MouseEvent) => {
+    if (!dragging || !startRef.current || !modeRef.current) return;
 
-      const p = getLocalPoint(e.clientX, e.clientY);
-      const dx = p.x - startRef.current.startX;
-      const dy = p.y - startRef.current.startY;
+    const dx = e.clientX - startRef.current.x;
+    const dy = e.clientY - startRef.current.y;
 
-      const base = startRef.current.rect;
-      const mode = modeRef.current;
+    const r0 = startRef.current.rect;
+    let next: Crop = { ...r0 };
 
-      let next: Crop = { ...base };
+    if (modeRef.current.type === "drag") {
+      next.x = r0.x + dx;
+      next.y = r0.y + dy;
+    } else {
+      const dir = modeRef.current.dir;
 
-      if (mode === "move") {
-        next = { ...base, x: base.x + dx, y: base.y + dy };
-      } else {
-        // resize from corners
-        if (mode === "se") {
-          next = { ...base, w: base.w + dx, h: base.h + dy };
-        }
-        if (mode === "sw") {
-          next = { ...base, x: base.x + dx, w: base.w - dx, h: base.h + dy };
-        }
-        if (mode === "ne") {
-          next = { ...base, y: base.y + dy, w: base.w + dx, h: base.h - dy };
-        }
-        if (mode === "nw") {
-          next = {
-            ...base,
-            x: base.x + dx,
-            y: base.y + dy,
-            w: base.w - dx,
-            h: base.h - dy,
-          };
-        }
+      // 東/西：改 w 或 x+w
+      if (dir.includes("e")) {
+        next.w = r0.w + dx;
+      }
+      if (dir.includes("w")) {
+        next.x = r0.x + dx;
+        next.w = r0.w - dx;
       }
 
-      // ✅ clamp 進頁面
-      next = clampRect(next, pageWidth, pageHeight, minW, minH);
-      onChange(next);
-    };
+      // 南/北：改 h 或 y+h
+      if (dir.includes("s")) {
+        next.h = r0.h + dy;
+      }
+      if (dir.includes("n")) {
+        next.y = r0.y + dy;
+        next.h = r0.h - dy;
+      }
+    }
 
-    const onUp = () => {
-      setDragging(false);
-      startRef.current = null;
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [dragging, onChange, pageWidth, pageHeight, minW, minH]);
-
-  const handleStyle: React.CSSProperties = {
-    position: "absolute",
-    width: 12,
-    height: 12,
-    background: "#fff",
-    border: "2px solid #2563eb",
-    borderRadius: 3,
+    onChange(clampRect(next, pageWidth, pageHeight));
   };
+
+  const onMouseUp = () => {
+    setDragging(false);
+    startRef.current = null;
+    modeRef.current = null;
+  };
+
+  // ✅ 只綁一次（不要每次 render 都重綁）
+  useEffect(() => {
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragging, pageWidth, pageHeight, value]);
 
   return (
     <div
-      ref={wrapRef}
+      ref={ref}
       style={{
         position: "absolute",
         left: value.x,
@@ -156,30 +143,30 @@ export default function PdfCropOverlay({
         background: "rgba(37, 99, 235, 0.08)",
         cursor: dragging ? "grabbing" : "move",
         boxSizing: "border-box",
-        touchAction: "none",
       }}
-      onMouseDown={(e) => begin(e, "move")}
+      onMouseDown={onMouseDown}
     >
-      {/* NW */}
-      <div
-        style={{ ...handleStyle, left: -7, top: -7, cursor: "nwse-resize" }}
-        onMouseDown={(e) => begin(e, "nw")}
-      />
-      {/* NE */}
-      <div
-        style={{ ...handleStyle, right: -7, top: -7, cursor: "nesw-resize" }}
-        onMouseDown={(e) => begin(e, "ne")}
-      />
-      {/* SW */}
-      <div
-        style={{ ...handleStyle, left: -7, bottom: -7, cursor: "nesw-resize" }}
-        onMouseDown={(e) => begin(e, "sw")}
-      />
-      {/* SE */}
-      <div
-        style={{ ...handleStyle, right: -7, bottom: -7, cursor: "nwse-resize" }}
-        onMouseDown={(e) => begin(e, "se")}
-      />
+      {/* ✅ 四角 resize handles */}
+      {(["nw", "ne", "sw", "se"] as const).map((dir) => (
+        <div
+          key={dir}
+          data-handle={dir}
+          style={{
+            position: "absolute",
+            width: 12,
+            height: 12,
+            background: "#fff",
+            border: "1px solid #2563eb",
+            borderRadius: 2,
+            left: dir.includes("w") ? -6 : undefined,
+            right: dir.includes("e") ? -6 : undefined,
+            top: dir.includes("n") ? -6 : undefined,
+            bottom: dir.includes("s") ? -6 : undefined,
+            cursor:
+              dir === "nw" || dir === "se" ? "nwse-resize" : "nesw-resize",
+          }}
+        />
+      ))}
     </div>
   );
 }

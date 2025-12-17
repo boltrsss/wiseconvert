@@ -681,20 +681,29 @@ export default function DynamicToolPage() {
                   ].join(" ")}
                   title={`Page ${i + 1}`}
                 >
-                  <div className="flex items-center justify-between px-1 pb-1">
-                    <span className={["text-xs", active ? "text-blue-700" : "text-slate-600"].join(" ")}>
-                      {i + 1}
-                    </span>
-                  </div>
 
-                  <div className="flex justify-center items-start">
-                    <PdfViewer
-                      fileUrl={previewUrl}
-                      pageIndex={i}
-                      mode="thumbnail"
-                      thumbWidth={THUMB_WIDTH}
-                    />
-                  </div>
+<div className="relative">
+  <div
+    className={[
+      "absolute left-1 top-1 z-10",
+      "text-[11px] px-1.5 py-0.5 rounded",
+      "bg-white/90 border",
+      active ? "text-blue-700 border-blue-200" : "text-slate-600 border-slate-200",
+    ].join(" ")}
+  >
+    {i + 1}
+  </div>
+
+  <PdfViewer
+    fileUrl={previewUrl}
+    pageIndex={i}
+    mode="thumbnail"
+    thumbWidth={THUMB_WIDTH}
+  />
+</div>
+
+
+                  
                 </button>
               );
             })}

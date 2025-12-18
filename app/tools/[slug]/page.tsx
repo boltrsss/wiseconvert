@@ -429,7 +429,14 @@ export default function DynamicToolPage() {
         badges={["Free", "Online"]}
       />
     }
-    sidebar={<ToolSidebar />}
+    sidebar={
+       <ToolSidebar
+        toolName={tool.name}
+        category={tool.category}
+        inputFormats={tool.input_formats}
+        outputFormats={tool.output_formats}
+      />
+      }
     seo={null}
     workspace={
     <div className="max-w-6xl mx-auto py-10 px-5 space-y-8">

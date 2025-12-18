@@ -75,7 +75,7 @@ export default function ToolPageTemplate({
 
           {/* Right: Sidebar */}
           {sidebar ? (
-            <aside className="w-full" self-start">
+            <aside className="w-full self-start">
               <div className="lg:sticky lg:top-28">
                 {sidebar}
               </div>

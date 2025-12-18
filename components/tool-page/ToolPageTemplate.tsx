@@ -45,9 +45,7 @@ export default function ToolPageTemplate({
 
         {/* Top Ad (full width) */}
         {showAds ? (
-          <div className="mt-4">
-            {topAd ?? <AdSlot slotId="tool-top" />}
-          </div>
+          <div className="mt-4">{topAd ?? <AdSlot slotId="tool-top" />}</div>
         ) : null}
 
         {/* Main Grid */}
@@ -62,11 +60,9 @@ export default function ToolPageTemplate({
           <div className="min-w-0">
             {workspace}
 
-            {/* Middle Ad (put inside left column so sticky range is long enough) */}
+            {/* Middle Ad */}
             {showAds ? (
-              <div className="mt-8">
-                {middleAd ?? <AdSlot slotId="tool-middle" />}
-              </div>
+              <div className="mt-8">{middleAd ?? <AdSlot slotId="tool-middle" />}</div>
             ) : null}
 
             {/* SEO Block */}
@@ -74,30 +70,12 @@ export default function ToolPageTemplate({
 
             {/* Bottom Ad */}
             {showAds ? (
-              <div className="mt-10 pb-12">
-                {bottomAd ?? <AdSlot slotId="tool-bottom" />}
-              </div>
+              <div className="mt-10 pb-12">{bottomAd ?? <AdSlot slotId="tool-bottom" />}</div>
             ) : null}
           </div>
 
-          {/* Right column: Sidebar
-              - Sticky only on xl+
-              - Smaller top gap
-              - Constrain height + allow internal scroll so bottom is reachable
-           */}
-          {hasSidebar ? (
-            <aside
-              className={[
-                "w-full",
-                "xl:sticky xl:top-16",
-                "xl:max-h-[calc(100vh-4rem)]",
-                "xl:overflow-auto",
-                "xl:pr-1",
-              ].join(" ")}
-            >
-              {sidebar}
-            </aside>
-          ) : null}
+          {/* Right column: Sidebar (normal flow, no sticky, no inner scrollbar) */}
+          {hasSidebar ? <aside className="w-full">{sidebar}</aside> : null}
         </div>
       </div>
     </div>

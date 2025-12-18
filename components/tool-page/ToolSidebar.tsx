@@ -10,12 +10,49 @@ type ToolSidebarProps = {
   outputFormats?: string[];
 };
 
+type RelatedItem = { label: string; href: string };
+
+function getRelatedTools(category?: string): RelatedItem[] {
+  const cat = (category || "").toLowerCase();
+
+  // ✅ 依 category 推薦（先用前端靜態 mapping，穩定可控）
+  if (cat === "pdf") {
+    return [
+      { label: "PDF Merge", href: "/tools/pdf-merge" },
+      { label: "PDF Split", href: "/tools/pdf-split" },
+      { label: "PDF Rotate", href: "/tools/pdf-rotate" },
+      { label: "PDF Crop", href: "/tools/pdf-crop" },
+      { label: "PDF Protect", href: "/tools/pdf-protect" },
+    ];
+  }
+
+  if (cat === "image") {
+    return [
+      { label: "Image Converter", href: "/tools/image-convert" },
+      { label: "PDF to JPG", href: "/tools/pdf-to-jpg" },
+    ];
+  }
+
+  if (cat === "video") {
+    return [{ label: "Video Converter", href: "/tools/video-convert" }];
+  }
+
+  // fallback：通用推薦（避免空白）
+  return [
+    { label: "PDF Merge", href: "/tools/pdf-merge" },
+    { label: "Image Converter", href: "/tools/image-convert" },
+    { label: "Video Converter", href: "/tools/video-convert" },
+  ];
+}
+
 export default function ToolSidebar({
   toolName,
   category,
   inputFormats = [],
   outputFormats = [],
 }: ToolSidebarProps) {
+  const related = getRelatedTools(category);
+
   return (
     <div className="space-y-6">
       {/* Tool Info */}
@@ -41,11 +78,8 @@ export default function ToolSidebar({
             <div className="text-slate-500 mb-1">Input formats</div>
             <div className="flex flex-wrap gap-1">
               {inputFormats.map((f) => (
-                <span
-                  key={f}
-                  className="px-2 py-0.5 text-xs rounded bg-slate-100"
-                >
-                  {f.toUpperCase()}
+                <span key={f} className="px-2 py-0.5 text-xs rounded bg-slate-100">
+                  {String(f).toUpperCase()}
                 </span>
               ))}
             </div>
@@ -57,11 +91,8 @@ export default function ToolSidebar({
             <div className="text-slate-500 mb-1">Output formats</div>
             <div className="flex flex-wrap gap-1">
               {outputFormats.map((f) => (
-                <span
-                  key={f}
-                  className="px-2 py-0.5 text-xs rounded bg-slate-100"
-                >
-                  {f.toUpperCase()}
+                <span key={f} className="px-2 py-0.5 text-xs rounded bg-slate-100">
+                  {String(f).toUpperCase()}
                 </span>
               ))}
             </div>
@@ -83,30 +114,13 @@ export default function ToolSidebar({
       <section className="border rounded-xl p-4 bg-white space-y-2">
         <h3 className="font-semibold text-base">Related Tools</h3>
         <ul className="text-sm space-y-1">
-          <li>
-            <Link
-              href="/tools/pdf-merge"
-              className="text-blue-600 hover:underline"
-            >
-              PDF Merge
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/tools/pdf-split"
-              className="text-blue-600 hover:underline"
-            >
-              PDF Split
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/tools/pdf-rotate"
-              className="text-blue-600 hover:underline"
-            >
-              PDF Rotate
-            </Link>
-          </li>
+          {related.map((item) => (
+            <li key={item.href}>
+              <Link href={item.href} className="text-blue-600 hover:underline">
+                {item.label}
+              </Link>
+            </li>
+          ))}
         </ul>
       </section>
 

@@ -27,14 +27,15 @@ export default function ToolSidebar({
     <div className={["w-full space-y-4", className || ""].join(" ")}>
       {/* Sidebar Ad */}
       {showAd ? (
-        <div className="rounded-2xl border border-gray-200 bg-white p-3">
-          <div className="mb-2 text-xs font-medium text-gray-600">
-            Sponsored
-          </div>
-          <AdSlot variant="sidebar" />
-        </div>
-      ) : null}
-
+  <div className="rounded-2xl border border-gray-200 bg-white p-3">
+    <div className="mb-2 text-xs font-medium text-gray-600">
+      Sponsored
+    </div>
+    <div className="min-h-[250px]">
+      <AdSlot />
+    </div>
+  </div>
+) : null}
       {/* Sections */}
       {sections && sections.length > 0
         ? sections.map((s) => (

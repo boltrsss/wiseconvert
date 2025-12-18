@@ -1,25 +1,29 @@
 // components/tool-page/ToolPageTemplate.tsx
 import React from "react";
-import { AdSlot } from "@/components/AdSlot";
+import AdSlot from "@/components/ads/AdSlot";
 
 type ToolPageTemplateProps = {
+  // Top: Hero area (title/desc/breadcrumbs etc.)
   hero?: React.ReactNode;
 
-  // Main tool UI
+  // Main content
   workspace: React.ReactNode;
 
-  // Extra sections (Tool info / tips / related) -> still allowed, shown under workspace
+  // Right sidebar (optional)
   sidebar?: React.ReactNode;
 
+  // SEO content block (optional)
   seo?: React.ReactNode;
 
+  // Control ad slots
   showAds?: boolean;
   topAd?: React.ReactNode;
   middleAd?: React.ReactNode;
   bottomAd?: React.ReactNode;
 
-  containerClassName?: string;
-  contentClassName?: string;
+  // Layout tuning
+  containerClassName?: string; // outer container
+  contentClassName?: string; // main grid
 };
 
 export default function ToolPageTemplate({
@@ -36,66 +40,69 @@ export default function ToolPageTemplate({
 }: ToolPageTemplateProps) {
   return (
     <div className={["w-full", containerClassName || ""].join(" ")}>
-      {/* Same “homepage feel”: wide canvas with side gutters for ads */}
-      <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
-        {/* Hero (title/desc) */}
-        <div className="pt-8">{hero ?? null}</div>
+      {/* 🔹 FreeConvert-level wide container */}
+      <div
+        className="
+          mx-auto
+          w-full
+          max-w-[1200px] xl:max-w-[1280px]
+          px-4 sm:px-6 lg:px-8
+        "
+      >
+        {/* Hero */}
+        {hero ? <div className="pt-6">{hero}</div> : <div className="pt-6" />}
 
-        {/* 3-column layout: Left Ad / Center Content / Right Ad */}
+        {/* Top Ad */}
+        {showAds && (
+          <div className="mt-4">
+            {topAd ?? <AdSlot variant="top" />}
+          </div>
+        )}
+
+        {/* Main Grid */}
         <div
           className={[
-            "mt-6 grid gap-6 items-start",
-            "xl:grid-cols-[300px_minmax(0,1fr)_300px]",
+            "mt-6 grid gap-6",
+            // Desktop: workspace + sidebar
+            "lg:grid-cols-[minmax(0,1fr)_360px]",
             contentClassName || "",
           ].join(" ")}
         >
-          {/* Left Ad (desktop only) */}
-          {showAds ? (
-            <aside className="hidden xl:block">
-              <AdSlot slotId="tool-left" />
+          {/* Left: Workspace */}
+          <div className="min-w-0">
+            {workspace}
+          </div>
+
+          {/* Right: Sidebar */}
+          {sidebar ? (
+            <aside className="w-full">
+              <div className="lg:sticky lg:top-24">
+                {sidebar}
+              </div>
             </aside>
-          ) : (
-            <aside className="hidden xl:block" />
-          )}
-
-          {/* Center column */}
-          <main className="min-w-0">
-            {/* Top Ad (center) */}
-            {showAds ? (
-              <div className="mb-6">{topAd ?? <AdSlot slotId="tool-top" />}</div>
-            ) : null}
-
-            {/* Tool workspace */}
-            <div>{workspace}</div>
-
-            {/* Below-workspace sections (info/tips/related) */}
-            {sidebar ? <div className="mt-8">{sidebar}</div> : null}
-
-            {/* Middle Ad (center) */}
-            {showAds ? (
-              <div className="mt-8">{middleAd ?? <AdSlot slotId="tool-middle" />}</div>
-            ) : null}
-
-            {/* SEO */}
-            {seo ? <div className="mt-10">{seo}</div> : null}
-
-            {/* Bottom Ad (center) */}
-            {showAds ? (
-              <div className="mt-10 pb-12">{bottomAd ?? <AdSlot slotId="tool-bottom" />}</div>
-            ) : (
-              <div className="pb-12" />
-            )}
-          </main>
-
-          {/* Right Ad (desktop only) */}
-          {showAds ? (
-            <aside className="hidden xl:block">
-              <AdSlot slotId="tool-right" />
-            </aside>
-          ) : (
-            <aside className="hidden xl:block" />
-          )}
+          ) : null}
         </div>
+
+        {/* Middle Ad */}
+        {showAds && (
+          <div className="mt-8">
+            {middleAd ?? <AdSlot variant="middle" />}
+          </div>
+        )}
+
+        {/* SEO Block */}
+        {seo ? (
+          <div className="mt-10">
+            {seo}
+          </div>
+        ) : null}
+
+        {/* Bottom Ad */}
+        {showAds && (
+          <div className="mt-10 pb-12">
+            {bottomAd ?? <AdSlot variant="bottom" />}
+          </div>
+        )}
       </div>
     </div>
   );

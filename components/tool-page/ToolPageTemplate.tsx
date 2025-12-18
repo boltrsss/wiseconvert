@@ -62,7 +62,7 @@ export default function ToolPageTemplate({
         {/* Main Grid */}
         <div
           className={[
-            "mt-6 grid gap-6",
+            "mt-6 grid gap-6 items-start",
             // Desktop: workspace + sidebar
             "lg:grid-cols-[minmax(0,1fr)_360px]",
             contentClassName || "",
@@ -73,12 +73,10 @@ export default function ToolPageTemplate({
             {workspace}
           </div>
 
-          {/* Right: Sidebar */}
+          {/* Right: Sidebar (Plan B sticky) */}
           {sidebar ? (
-            <aside className="w-full self-start">
-              <div className="lg:sticky lg:top-28">
-                {sidebar}
-              </div>
+            <aside className="w-full lg:sticky lg:top-28 lg:h-fit">
+              {sidebar}
             </aside>
           ) : null}
         </div>

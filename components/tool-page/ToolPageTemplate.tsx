@@ -1,29 +1,24 @@
 // components/tool-page/ToolPageTemplate.tsx
 import React from "react";
-import AdSlot from "@/components/ads/AdSlot";
+import { AdSlot } from "@/components/AdSlot";
 
 type ToolPageTemplateProps = {
-  // Top: Hero area (title/desc/breadcrumbs etc.)
   hero?: React.ReactNode;
-
-  // Main content
   workspace: React.ReactNode;
 
-  // Right sidebar (optional)
+  // 仍保留這個 prop，方便你沿用既有 ToolSidebar 元件
+  // 但不再做右側欄：會被渲染到主欄位的下方（FreeConvert 風格）
   sidebar?: React.ReactNode;
 
-  // SEO content block (optional)
   seo?: React.ReactNode;
 
-  // Control ad slots
   showAds?: boolean;
   topAd?: React.ReactNode;
   middleAd?: React.ReactNode;
   bottomAd?: React.ReactNode;
 
-  // Layout tuning
-  containerClassName?: string; // outer container
-  contentClassName?: string; // main grid
+  containerClassName?: string;
+  contentClassName?: string;
 };
 
 export default function ToolPageTemplate({
@@ -40,69 +35,44 @@ export default function ToolPageTemplate({
 }: ToolPageTemplateProps) {
   return (
     <div className={["w-full", containerClassName || ""].join(" ")}>
-      {/* 🔹 FreeConvert-level wide container */}
       <div
-        className="
-          mx-auto
-          w-full
-          max-w-[1200px] xl:max-w-[1280px]
-          px-4 sm:px-6 lg:px-8
-        "
+        className={[
+          "mx-auto w-full",
+          "max-w-[1200px] xl:max-w-[1280px]",
+          "px-4 sm:px-6 lg:px-8",
+        ].join(" ")}
       >
         {/* Hero */}
-        {hero ? <div className="pt-6">{hero}</div> : <div className="pt-6" />}
+        <div className="pt-6">{hero ?? null}</div>
 
         {/* Top Ad */}
-        {showAds && (
-          <div className="mt-4">
-            {topAd ?? <AdSlot variant="top" />}
-          </div>
-        )}
-
-        {/* Main Grid */}
-        <div
-          className={[
-            "mt-6 grid gap-6",
-            // Desktop: workspace + sidebar
-            "lg:grid-cols-[minmax(0,1fr)_480px]",
-            contentClassName || "",
-          ].join(" ")}
-        >
-          {/* Left: Workspace */}
-          <div className="min-w-0">
-            {workspace}
-          </div>
-
-          {/* Right: Sidebar */}
-          {sidebar ? (
-            <aside className="w-full">
-              <div className="lg:sticky lg:top-24">
-                {sidebar}
-              </div>
-            </aside>
-          ) : null}
-        </div>
-
-        {/* Middle Ad */}
-        {showAds && (
-          <div className="mt-8">
-            {middleAd ?? <AdSlot variant="middle" />}
-          </div>
-        )}
-
-        {/* SEO Block */}
-        {seo ? (
-          <div className="mt-10">
-            {seo}
-          </div>
+        {showAds ? (
+          <div className="mt-4">{topAd ?? <AdSlot slotId="tool-top" />}</div>
         ) : null}
 
-        {/* Bottom Ad */}
-        {showAds && (
-          <div className="mt-10 pb-12">
-            {bottomAd ?? <AdSlot variant="bottom" />}
-          </div>
-        )}
+        {/* Single column flow (FreeConvert-like) */}
+        <div className={["mt-6 space-y-8", contentClassName || ""].join(" ")}>
+          {/* Workspace */}
+          <div className="min-w-0">{workspace}</div>
+
+          {/* “Sidebar” content becomes below sections */}
+          {sidebar ? <div>{sidebar}</div> : null}
+
+          {/* Middle Ad */}
+          {showAds ? (
+            <div>{middleAd ?? <AdSlot slotId="tool-middle" />}</div>
+          ) : null}
+
+          {/* SEO Block */}
+          {seo ? <div>{seo}</div> : null}
+
+          {/* Bottom Ad */}
+          {showAds ? (
+            <div className="pb-12">{bottomAd ?? <AdSlot slotId="tool-bottom" />}</div>
+          ) : (
+            <div className="pb-12" />
+          )}
+        </div>
       </div>
     </div>
   );

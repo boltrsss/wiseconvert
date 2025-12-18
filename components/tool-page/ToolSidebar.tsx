@@ -15,7 +15,6 @@ type RelatedItem = { label: string; href: string };
 function getRelatedTools(category?: string): RelatedItem[] {
   const cat = (category || "").toLowerCase();
 
-  // ✅ 依 category 推薦（先用前端靜態 mapping，穩定可控）
   if (cat === "pdf") {
     return [
       { label: "PDF Merge", href: "/tools/pdf-merge" },
@@ -37,7 +36,6 @@ function getRelatedTools(category?: string): RelatedItem[] {
     return [{ label: "Video Converter", href: "/tools/video-convert" }];
   }
 
-  // fallback：通用推薦（避免空白）
   return [
     { label: "PDF Merge", href: "/tools/pdf-merge" },
     { label: "Image Converter", href: "/tools/image-convert" },
@@ -124,7 +122,7 @@ export default function ToolSidebar({
         </ul>
       </section>
 
-      {/* Sidebar Ad */}
+      {/* Sidebar Ad（最後） */}
       <section>
         <AdSlot variant="sidebar" />
       </section>

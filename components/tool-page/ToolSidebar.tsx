@@ -53,6 +53,11 @@ export default function ToolSidebar({
 
   return (
     <div className="space-y-6">
+      {/* 🔝 Sidebar Ad（第一順位） */}
+      <section>
+        <AdSlot variant="sidebar" />
+      </section>
+
       {/* Tool Info */}
       <section className="border rounded-xl p-4 bg-white space-y-2">
         <h3 className="font-semibold text-base">Tool Info</h3>
@@ -76,7 +81,10 @@ export default function ToolSidebar({
             <div className="text-slate-500 mb-1">Input formats</div>
             <div className="flex flex-wrap gap-1">
               {inputFormats.map((f) => (
-                <span key={f} className="px-2 py-0.5 text-xs rounded bg-slate-100">
+                <span
+                  key={String(f)}
+                  className="px-2 py-0.5 text-xs rounded bg-slate-100"
+                >
                   {String(f).toUpperCase()}
                 </span>
               ))}
@@ -89,7 +97,10 @@ export default function ToolSidebar({
             <div className="text-slate-500 mb-1">Output formats</div>
             <div className="flex flex-wrap gap-1">
               {outputFormats.map((f) => (
-                <span key={f} className="px-2 py-0.5 text-xs rounded bg-slate-100">
+                <span
+                  key={String(f)}
+                  className="px-2 py-0.5 text-xs rounded bg-slate-100"
+                >
                   {String(f).toUpperCase()}
                 </span>
               ))}
@@ -120,11 +131,6 @@ export default function ToolSidebar({
             </li>
           ))}
         </ul>
-      </section>
-
-      {/* Sidebar Ad（最後） */}
-      <section>
-        <AdSlot variant="sidebar" />
       </section>
     </div>
   );

@@ -1,6 +1,6 @@
 // components/tool-page/ToolPageTemplate.tsx
 import React from "react";
-import AdSlot from "@/components/ads/AdSlot";
+import { AdSlot } from "@/components/AdSlot";
 
 type ToolPageTemplateProps = {
   hero?: React.ReactNode;
@@ -34,17 +34,21 @@ export default function ToolPageTemplate({
   return (
     <div className={["w-full", containerClassName || ""].join(" ")}>
       <div
-        className="
-          mx-auto w-full
-          max-w-[1200px] xl:max-w-[1280px]
-          px-4 sm:px-6 lg:px-8
-        "
+        className={[
+          "mx-auto w-full",
+          "max-w-[1200px] xl:max-w-[1280px]",
+          "px-4 sm:px-6 lg:px-8",
+        ].join(" ")}
       >
         {/* Hero */}
-        {hero ? <div className="pt-6">{hero}</div> : <div className="pt-6" />}
+        <div className="pt-6">{hero ?? null}</div>
 
         {/* Top Ad (full width) */}
-        {showAds && <div className="mt-4">{topAd ?? <AdSlot variant="top" />}</div>}
+        {showAds ? (
+          <div className="mt-4">
+            {topAd ?? <AdSlot slotId="tool-top" />}
+          </div>
+        ) : null}
 
         {/* Main Grid */}
         <div
@@ -55,3 +59,47 @@ export default function ToolPageTemplate({
           ].join(" ")}
         >
           {/* Left column */}
+          <div className="min-w-0">
+            {workspace}
+
+            {/* Middle Ad (put inside left column so sticky range is long enough) */}
+            {showAds ? (
+              <div className="mt-8">
+                {middleAd ?? <AdSlot slotId="tool-middle" />}
+              </div>
+            ) : null}
+
+            {/* SEO Block */}
+            {seo ? <div className="mt-10">{seo}</div> : null}
+
+            {/* Bottom Ad */}
+            {showAds ? (
+              <div className="mt-10 pb-12">
+                {bottomAd ?? <AdSlot slotId="tool-bottom" />}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Right column: Sidebar
+              - Sticky only on xl+
+              - Smaller top gap
+              - Constrain height + allow internal scroll so bottom is reachable
+           */}
+          {hasSidebar ? (
+            <aside
+              className={[
+                "w-full",
+                "xl:sticky xl:top-16",
+                "xl:max-h-[calc(100vh-4rem)]",
+                "xl:overflow-auto",
+                "xl:pr-1",
+              ].join(" ")}
+            >
+              {sidebar}
+            </aside>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}

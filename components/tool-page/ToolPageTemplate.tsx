@@ -64,7 +64,7 @@ export default function ToolPageTemplate({
           className={[
             "mt-6 grid gap-6",
             // Desktop: workspace + sidebar
-            "lg:grid-cols-[minmax(0,1fr)_360px]",
+            "lg:grid-cols-[minmax(0,1fr)_480px]",
             contentClassName || "",
           ].join(" ")}
         >

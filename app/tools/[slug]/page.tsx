@@ -4,6 +4,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import PdfViewer from "@/components/pdf/PdfViewer";
 import PdfCropOverlay from "@/components/pdf/PdfCropOverlay";
+import ToolPageTemplate from "@/components/tool-page/ToolPageTemplate";
+import ToolHero from "@/components/tool-page/ToolHero";
+import ToolSidebar from "@/components/tool-page/ToolSidebar";
+
 
 export const runtime = "edge";
 
@@ -412,6 +416,22 @@ export default function DynamicToolPage() {
 
   const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
   return (
+  <ToolPageTemplate
+    hero={
+      <ToolHero
+        title={tool.name}
+        description={tool.description}
+        breadcrumbs={[
+          { label: "Home", href: "/" },
+          { label: "Tools", href: "/tools" },
+          { label: tool.name },
+        ]}
+        badges={["Free", "Online"]}
+      />
+    }
+    sidebar={<ToolSidebar />}
+    seo={null}
+    workspace={
     <div className="max-w-6xl mx-auto py-10 px-5 space-y-8">
       <header>
         <h1 className="text-3xl font-bold">{tool.name}</h1>
@@ -936,5 +956,7 @@ export default function DynamicToolPage() {
         )}
       </section>
     </div>
+      }
+  />
   );
 }

@@ -40,8 +40,15 @@ export default function ToolPageTemplate({
 }: ToolPageTemplateProps) {
   return (
     <div className={["w-full", containerClassName || ""].join(" ")}>
-      {/* Wide container (FreeConvert-like) */}
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* 🔹 FreeConvert-level wide container */}
+      <div
+        className="
+          mx-auto
+          w-full
+          max-w-[1200px] xl:max-w-[1280px]
+          px-4 sm:px-6 lg:px-8
+        "
+      >
         {/* Hero */}
         {hero ? <div className="pt-6">{hero}</div> : <div className="pt-6" />}
 
@@ -56,7 +63,7 @@ export default function ToolPageTemplate({
         <div
           className={[
             "mt-6 grid gap-6",
-            // Desktop: 2 columns (workspace + sidebar)
+            // Desktop: workspace + sidebar
             "lg:grid-cols-[minmax(0,1fr)_360px]",
             contentClassName || "",
           ].join(" ")}
@@ -69,24 +76,30 @@ export default function ToolPageTemplate({
           {/* Right: Sidebar */}
           {sidebar ? (
             <aside className="w-full">
-              <div className="lg:sticky lg:top-24">{sidebar}</div>
+              <div className="lg:sticky lg:top-24">
+                {sidebar}
+              </div>
             </aside>
           ) : null}
         </div>
 
         {/* Middle Ad */}
         {showAds && (
-          <div className="mt-6">
+          <div className="mt-8">
             {middleAd ?? <AdSlot variant="middle" />}
           </div>
         )}
 
         {/* SEO Block */}
-        {seo ? <div className="mt-8">{seo}</div> : null}
+        {seo ? (
+          <div className="mt-10">
+            {seo}
+          </div>
+        ) : null}
 
         {/* Bottom Ad */}
         {showAds && (
-          <div className="mt-8 pb-10">
+          <div className="mt-10 pb-12">
             {bottomAd ?? <AdSlot variant="bottom" />}
           </div>
         )}

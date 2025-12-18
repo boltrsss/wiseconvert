@@ -69,7 +69,7 @@ export default function ToolPageTemplate({
           ].join(" ")}
         >
           {/* Left: Workspace */}
-          <div className="min-w-0">
+          <div className="min-w-0 min-h-[120vh]">
             {workspace}
           </div>
 

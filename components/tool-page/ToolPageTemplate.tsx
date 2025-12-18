@@ -38,6 +38,8 @@ export default function ToolPageTemplate({
   containerClassName,
   contentClassName,
 }: ToolPageTemplateProps) {
+  const hasSidebar = !!sidebar;
+
   return (
     <div className={["w-full", containerClassName || ""].join(" ")}>
       {/* 🔹 FreeConvert-level wide container */}
@@ -52,55 +54,46 @@ export default function ToolPageTemplate({
         {/* Hero */}
         {hero ? <div className="pt-6">{hero}</div> : <div className="pt-6" />}
 
-        {/* Top Ad */}
-        {showAds && (
-          <div className="mt-4">
-            {topAd ?? <AdSlot variant="top" />}
-          </div>
-        )}
+        {/* Top Ad (full width, like FreeConvert) */}
+        {showAds && <div className="mt-4">{topAd ?? <AdSlot variant="top" />}</div>}
 
         {/* Main Grid */}
         <div
           className={[
             "mt-6 grid gap-6 items-start",
-            // Desktop: workspace + sidebar
-            "lg:grid-cols-[minmax(0,1fr)_360px]",
+            hasSidebar ? "lg:grid-cols-[minmax(0,1fr)_360px]" : "grid-cols-1",
             contentClassName || "",
           ].join(" ")}
         >
-          {/* Left: Workspace */}
-          <div className="min-w-0 min-h-[120vh]">
+          {/* Left: Workspace + (Middle Ad / SEO / Bottom Ad) */}
+          <div className="min-w-0">
             {workspace}
+
+            {/* Middle Ad (left column, extends sticky range) */}
+            {showAds && (
+              <div className="mt-8">
+                {middleAd ?? <AdSlot variant="middle" />}
+              </div>
+            )}
+
+            {/* SEO Block (left column, extends sticky range) */}
+            {seo ? <div className="mt-10">{seo}</div> : null}
+
+            {/* Bottom Ad (left column, extends sticky range) */}
+            {showAds && (
+              <div className="mt-10 pb-12">
+                {bottomAd ?? <AdSlot variant="bottom" />}
+              </div>
+            )}
           </div>
 
-          {/* Right: Sidebar (Plan B sticky) */}
-          {sidebar ? (
+          {/* Right: Sidebar (sticky across the whole left column content) */}
+          {hasSidebar ? (
             <aside className="w-full lg:sticky lg:top-28 lg:h-fit">
               {sidebar}
             </aside>
           ) : null}
         </div>
-
-        {/* Middle Ad */}
-        {showAds && (
-          <div className="mt-8">
-            {middleAd ?? <AdSlot variant="middle" />}
-          </div>
-        )}
-
-        {/* SEO Block */}
-        {seo ? (
-          <div className="mt-10">
-            {seo}
-          </div>
-        ) : null}
-
-        {/* Bottom Ad */}
-        {showAds && (
-          <div className="mt-10 pb-12">
-            {bottomAd ?? <AdSlot variant="bottom" />}
-          </div>
-        )}
       </div>
     </div>
   );

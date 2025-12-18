@@ -1,6 +1,7 @@
 // components/tool-page/ToolSidebar.tsx
 import React from "react";
-import AdSlot from "@/components/AdSlot";
+import { AdSlot } from "@/components/AdSlot";
+
 
 type SidebarSection = {
   title: string;

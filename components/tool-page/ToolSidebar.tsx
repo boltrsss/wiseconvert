@@ -32,7 +32,7 @@ export default function ToolSidebar({
       Sponsored
     </div>
     <div className="min-h-[250px]">
-      <AdSlot />
+      <AdSlot slotId="tool-sidebar" />
     </div>
   </div>
 ) : null}

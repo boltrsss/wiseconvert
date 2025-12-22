@@ -458,7 +458,7 @@ export default function DynamicToolPage() {
       }
     seo={seoBlock}
     workspace={
-    <div className="max-w-6xl mx-auto py-10 px-5 space-y-8">
+    <div className="space-y-8">
       <header>
         <h1 className="text-3xl font-bold">{tool.name}</h1>
         <p className="text-slate-600 mt-2">{tool.description}</p>

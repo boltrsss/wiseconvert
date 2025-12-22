@@ -439,7 +439,7 @@ export default function DynamicToolPage() {
     hero={
       <ToolHero
         title={tool.name}
-        description={tool.description}
+        description={nul}
         breadcrumbs={[
           { label: "Home", href: "/" },
           { label: "Tools", href: "/tools" },

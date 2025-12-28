@@ -469,6 +469,54 @@ const safeDesc =
 ];
 
 
+  const slugLc = String(tool.slug || "").toLowerCase();
+const catLc = String(tool.category || "").toLowerCase();
+
+const useCaseHints: string[] = (() => {
+  // tool-specific hints (content-only)
+  if (slugLc.includes("pdf-merge")) {
+    return [
+      "Combine multiple PDF files into a single document for sharing or printing.",
+      "Reorder PDFs before merging to create the exact final sequence.",
+    ];
+  }
+  if (slugLc.includes("pdf-split")) {
+    return [
+      "Split a PDF into separate files by page range for easier sharing.",
+      "Extract specific pages into a new PDF for quick collaboration.",
+    ];
+  }
+  if (slugLc.includes("pdf-crop")) {
+    return [
+      "Crop PDF pages to remove margins or unwanted areas for cleaner printing.",
+      "Apply consistent cropping for documents scanned with extra whitespace.",
+    ];
+  }
+  if (slugLc.includes("pdf-rotate")) {
+    return [
+      "Fix sideways or upside-down pages to make PDFs easier to read.",
+      "Rotate scanned documents to the correct orientation before sharing.",
+    ];
+  }
+
+  // category-level hints
+  if (catLc === "image") {
+    return [
+      "Convert images for web upload, email, or social sharing with better compatibility.",
+      "Export to a widely supported format for consistent viewing across devices.",
+    ];
+  }
+  if (catLc === "video") {
+    return [
+      "Convert videos to a more compatible format for playback across devices.",
+      "Export optimized videos for sharing, uploading, or archiving.",
+    ];
+  }
+
+  return [];
+})();
+
+
 
 const seoBlock = (
   <section className="mt-10 space-y-8">
@@ -484,22 +532,31 @@ const seoBlock = (
     <div className="space-y-3">
       <h2 className="text-xl font-semibold">Use cases</h2>
       <ul className="list-disc pl-5 text-slate-700 space-y-1">
-        <li>
-          Convert files with <span className="font-medium">{toolName}</span> for quick sharing,
-          downloading, or archiving.
-        </li>
-        <li>Standardize file formats to ensure compatibility across devices and platforms.</li>
-        {allowMultiple ? (
-          <li>Convert multiple files in one session to save time (batch supported).</li>
-        ) : (
-          <li>Convert a single file with a simple, focused workflow.</li>
-        )}
-        {hasSettings ? (
-          <li>Fine-tune output using available conversion options.</li>
-        ) : (
-          <li>Use default best-practice settings for fast, reliable results.</li>
-        )}
-      </ul>
+  {/* Tool/category specific hints (1–2 items) */}
+  {useCaseHints.slice(0, 2).map((text) => (
+    <li key={text}>{text}</li>
+  ))}
+
+  {/* Universal use cases */}
+  <li>
+    Convert files with <span className="font-medium">{toolName}</span> for quick sharing,
+    downloading, or archiving.
+  </li>
+  <li>Standardize file formats to ensure compatibility across devices and platforms.</li>
+
+  {allowMultiple ? (
+    <li>Convert multiple files in one session to save time (batch supported).</li>
+  ) : (
+    <li>Convert a single file with a simple, focused workflow.</li>
+  )}
+
+  {hasSettings ? (
+    <li>Fine-tune output using available conversion options.</li>
+  ) : (
+    <li>Use default best-practice settings for fast, reliable results.</li>
+  )}
+</ul>
+
     </div>
 
     {/* Supported formats */}

@@ -608,11 +608,16 @@ const seoBlock = (
     <div className="space-y-3">
       <h2 className="text-xl font-semibold">Why choose this tool</h2>
       <ul className="list-disc pl-5 text-slate-700 space-y-1">
-        <li>Designed for fast, no-friction file conversions.</li>
-        <li>Format support is clearly defined per tool schema.</li>
-        <li>A straightforward workflow without unnecessary steps.</li>
-        {allowMultiple && <li>Batch processing is available when supported.</li>}
-      </ul>
+  <li>If upload fails, confirm the file format is supported and try again.</li>
+  <li>If the output format you want isn’t listed, upload first — options depend on the tool schema.</li>
+  <li>If the result isn’t as expected, switch output format or reset options (if available).</li>
+  {allowMultiple ? (
+    <li>If converting many files, try fewer files per run for quicker completion.</li>
+  ) : (
+    <li>If you have multiple files, convert one first to confirm the output before repeating.</li>
+  )}
+</ul>
+
     </div>
 
     {hasSettings && (

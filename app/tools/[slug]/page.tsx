@@ -444,32 +444,30 @@ const safeDesc =
     a: `Upload your file, choose an output format, adjust options if available, then click Start to generate the result.`,
   },
   {
-    q: `What input formats does ${toolName} support?`,
+    q: `What formats does ${toolName} support?`,
     a:
-      inFormats.length > 0
-        ? `Supported input formats include: ${prettyFormats(inFormats)}.`
-        : `Supported input formats are shown on this page based on the tool schema.`,
+      inFormats.length > 0 && outFormats.length > 0
+        ? `Input: ${prettyFormats(inFormats)}. Output: ${prettyFormats(outFormats)}.`
+        : inFormats.length > 0
+        ? `Supported input formats include: ${prettyFormats(inFormats)}. Output options appear after upload.`
+        : outFormats.length > 0
+        ? `Supported output formats include: ${prettyFormats(outFormats)}. Input options are shown based on the tool schema.`
+        : `Supported formats are shown on this page based on the tool schema.`,
   },
   {
-    q: `What output formats can I export to?`,
-    a:
-      outFormats.length > 0
-        ? `You can export to: ${prettyFormats(outFormats)}.`
-        : `Output format options appear after upload based on the tool schema.`,
-  },
-  {
-    q: allowMultiple ? `Can I convert multiple files at once?` : `Can I convert multiple files at once?`,
+    q: `Can I convert multiple files at once?`,
     a: allowMultiple
       ? `Yes. This tool supports batch conversion when multiple files are uploaded.`
       : `This tool is designed for one file at a time for a simpler workflow.`,
   },
   {
-    q: `Will my settings affect the output?`,
+    q: `Will conversion options affect the output?`,
     a: hasSettings
-      ? `Yes. Available conversion options can change the output depending on the selected format.`
+      ? `Yes. Available options can change the output depending on the selected format.`
       : `This tool uses default best-practice settings for fast, reliable results.`,
   },
 ];
+
 
 
 const seoBlock = (
@@ -558,6 +556,35 @@ const seoBlock = (
   </div>
 </div>
 
+    {/* Troubleshooting */}
+<div className="space-y-3">
+  <h2 className="text-xl font-semibold">Troubleshooting</h2>
+  <ul className="list-disc pl-5 text-slate-700 space-y-1">
+    <li>
+      If the upload fails, double-check the file type and try again with a smaller file size.
+    </li>
+    <li>
+      If you don’t see the expected output format, upload the file first — available options depend
+      on the tool schema.
+    </li>
+    <li>
+      If the result looks incorrect, try a different output format or reset conversion options (if
+      available).
+    </li>
+    {allowMultiple ? (
+      <li>
+        For batch conversions, verify all files are supported and keep the number of files
+        reasonable for faster processing.
+      </li>
+    ) : (
+      <li>
+        For best results, convert one file at a time and confirm the output before converting more.
+      </li>
+    )}
+  </ul>
+</div>
+
+    
   </section>
 );
 

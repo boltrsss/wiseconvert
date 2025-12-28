@@ -415,24 +415,95 @@ export default function DynamicToolPage() {
       status.output_s3_key?.toLowerCase().endsWith(".zip"));
 
   const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
-    const seoBlock = (
-    <section className="space-y-4 text-sm text-slate-700 leading-relaxed">
-      <h2 className="text-lg font-semibold">About {tool.name}</h2>
+    // --- SEO Block (A-2): content-only structure improvement ---
+const toolName = tool.name;
+const toolDesc = tool.description;
+const inFormats = Array.isArray(tool.input_formats) ? tool.input_formats : [];
+const outFormats = Array.isArray((tool as any).output_formats)
+  ? (tool as any).output_formats
+  : [];
+const allowMultiple = Boolean((tool as any).allow_multiple);
+const settingsObj = (tool as any).settings ?? {};
+const hasSettings =
+  settingsObj && typeof settingsObj === "object" && Object.keys(settingsObj).length > 0;
 
-      <p>
-        {tool.name} helps you convert files quickly and securely online. No
-        installation required — works directly in your browser.
-      </p>
+const prettyFormats = (arr: string[]) =>
+  arr
+    .filter(Boolean)
+    .map((f) => String(f).toUpperCase())
+    .join(", ");
 
-      <h3 className="font-semibold">How to use {tool.name}</h3>
+const seoBlock = (
+  <section className="mt-10 space-y-8">
+    {/* Overview */}
+    <div className="space-y-3">
+      <h2 className="text-xl font-semibold">About {toolName}</h2>
+      <p className="text-slate-700 leading-relaxed">{toolDesc}</p>
+    </div>
 
-      <ol className="list-decimal pl-5 space-y-1">
-        <li>Upload your file.</li>
-        <li>Select output format and settings.</li>
-        <li>Click start and download the result.</li>
-      </ol>
-    </section>
-  );
+    {/* Use cases */}
+    <div className="space-y-3">
+      <h2 className="text-xl font-semibold">Use cases</h2>
+      <ul className="list-disc pl-5 text-slate-700 space-y-1">
+        <li>
+          Convert <span className="font-medium">{toolName}</span> files quickly for sharing, email,
+          or web upload.
+        </li>
+        <li>Standardize file formats across devices and apps.</li>
+        {allowMultiple ? (
+          <li>Process multiple files in one go (batch supported).</li>
+        ) : (
+          <li>Convert a single file with a simple workflow.</li>
+        )}
+        {hasSettings ? (
+          <li>Adjust conversion options when available.</li>
+        ) : (
+          <li>Use default best-practice settings.</li>
+        )}
+      </ul>
+    </div>
+
+    {/* Supported formats */}
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold">Supported formats</h2>
+
+      <div className="space-y-2">
+        <h3 className="text-base font-semibold">Input formats</h3>
+        <p className="text-slate-700">
+          {inFormats.length > 0 ? prettyFormats(inFormats) : "See tool for details."}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-base font-semibold">Output formats</h3>
+        <p className="text-slate-700">
+          {outFormats.length > 0 ? prettyFormats(outFormats) : "Options appear after upload."}
+        </p>
+      </div>
+    </div>
+
+    {/* Why choose */}
+    <div className="space-y-3">
+      <h2 className="text-xl font-semibold">Why choose this tool</h2>
+      <ul className="list-disc pl-5 text-slate-700 space-y-1">
+        <li>Fast, focused, and easy to use.</li>
+        <li>Schema-driven format support.</li>
+        <li>No unnecessary steps.</li>
+        {allowMultiple && <li>Batch processing supported.</li>}
+      </ul>
+    </div>
+
+    {hasSettings && (
+      <div className="space-y-3">
+        <h2 className="text-xl font-semibold">Conversion options</h2>
+        <p className="text-slate-700">
+          Available options depend on the selected format and appear dynamically.
+        </p>
+      </div>
+    )}
+  </section>
+);
+
 
   return (
   <ToolPageTemplate

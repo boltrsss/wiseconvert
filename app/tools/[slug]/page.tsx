@@ -516,6 +516,23 @@ const useCaseHints: string[] = (() => {
   return [];
 })();
 
+const formatBadges = (arr: string[]) => {
+  const list = (arr || []).filter(Boolean).slice(0, 24); // 避免太長
+  if (list.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {list.map((f) => (
+        <span
+          key={f}
+          className="inline-flex items-center rounded-md border bg-white px-2 py-1 text-xs text-slate-700"
+        >
+          {String(f).toUpperCase()}
+        </span>
+      ))}
+    </div>
+  );
+};
 
 
 const seoBlock = (
@@ -568,16 +585,22 @@ const seoBlock = (
 
       <div className="space-y-2">
         <h3 className="text-base font-semibold">Input formats</h3>
-        <p className="text-slate-700">
-          {inFormats.length > 0 ? prettyFormats(inFormats) : "See tool for details."}
-        </p>
+       {inFormats.length > 0 ? (
+  formatBadges(inFormats)
+) : (
+  <p className="text-slate-700">See tool for details.</p>
+)}
+
       </div>
 
       <div className="space-y-2">
         <h3 className="text-base font-semibold">Output formats</h3>
-        <p className="text-slate-700">
-          {outFormats.length > 0 ? prettyFormats(outFormats) : "Options appear after upload."}
-        </p>
+        {outFormats.length > 0 ? (
+  formatBadges(outFormats)
+) : (
+  <p className="text-slate-700">Options appear after upload.</p>
+)}
+
       </div>
     </div>
 

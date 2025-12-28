@@ -438,6 +438,39 @@ const safeDesc =
   typeof toolDesc === "string" && toolDesc.trim().length > 0
     ? toolDesc.trim()
     : "convert files easily";
+  const faqItems: Array<{ q: string; a: string }> = [
+  {
+    q: `How do I use ${toolName}?`,
+    a: `Upload your file, choose an output format, adjust options if available, then click Start to generate the result.`,
+  },
+  {
+    q: `What input formats does ${toolName} support?`,
+    a:
+      inFormats.length > 0
+        ? `Supported input formats include: ${prettyFormats(inFormats)}.`
+        : `Supported input formats are shown on this page based on the tool schema.`,
+  },
+  {
+    q: `What output formats can I export to?`,
+    a:
+      outFormats.length > 0
+        ? `You can export to: ${prettyFormats(outFormats)}.`
+        : `Output format options appear after upload based on the tool schema.`,
+  },
+  {
+    q: allowMultiple ? `Can I convert multiple files at once?` : `Can I convert multiple files at once?`,
+    a: allowMultiple
+      ? `Yes. This tool supports batch conversion when multiple files are uploaded.`
+      : `This tool is designed for one file at a time for a simpler workflow.`,
+  },
+  {
+    q: `Will my settings affect the output?`,
+    a: hasSettings
+      ? `Yes. Available conversion options can change the output depending on the selected format.`
+      : `This tool uses default best-practice settings for fast, reliable results.`,
+  },
+];
+
 
 const seoBlock = (
   <section className="mt-10 space-y-8">
@@ -512,6 +545,19 @@ const seoBlock = (
         </p>
       </div>
     )}
+    {/* FAQ */}
+<div className="space-y-3">
+  <h2 className="text-xl font-semibold">FAQ</h2>
+  <div className="space-y-3">
+    {faqItems.map((item) => (
+      <div key={item.q} className="border rounded-lg p-4 bg-white">
+        <h3 className="font-semibold text-base">{item.q}</h3>
+        <p className="text-slate-700 mt-2 leading-relaxed">{item.a}</p>
+      </div>
+    ))}
+  </div>
+</div>
+
   </section>
 );
 

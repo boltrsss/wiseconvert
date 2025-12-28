@@ -415,15 +415,15 @@ export default function DynamicToolPage() {
       status.output_s3_key?.toLowerCase().endsWith(".zip"));
 
   const actionLabel = tool.slug === "pdf-merge" ? "開始合併" : "開始";
-    // --- SEO Block (A-2): content-only structure improvement ---
+    // --- SEO Block (A-3): content-only template consistency (no logic changes) ---
 const toolName = tool.name;
 const toolDesc = tool.description;
+
 const inFormats = Array.isArray(tool.input_formats) ? tool.input_formats : [];
-const outFormats = Array.isArray((tool as any).output_formats)
-  ? (tool as any).output_formats
-  : [];
-const allowMultiple = Boolean((tool as any).allow_multiple);
-const settingsObj = (tool as any).settings ?? {};
+const outFormats = Array.isArray(tool.output_formats) ? tool.output_formats : [];
+
+const allowMultiple = Boolean(tool.allow_multiple);
+const settingsObj = tool.settings ?? {};
 const hasSettings =
   settingsObj && typeof settingsObj === "object" && Object.keys(settingsObj).length > 0;
 
@@ -433,12 +433,20 @@ const prettyFormats = (arr: string[]) =>
     .map((f) => String(f).toUpperCase())
     .join(", ");
 
+// 防呆：避免 description 不是字串或空字串造成 toLowerCase 問題
+const safeDesc =
+  typeof toolDesc === "string" && toolDesc.trim().length > 0
+    ? toolDesc.trim()
+    : "convert files easily";
+
 const seoBlock = (
   <section className="mt-10 space-y-8">
     {/* Overview */}
     <div className="space-y-3">
       <h2 className="text-xl font-semibold">About {toolName}</h2>
-      <p className="text-slate-700 leading-relaxed">{toolDesc}</p>
+      <p className="text-slate-700 leading-relaxed">
+        {toolName} is an online file conversion tool that lets you {safeDesc.toLowerCase()}.
+      </p>
     </div>
 
     {/* Use cases */}
@@ -446,19 +454,19 @@ const seoBlock = (
       <h2 className="text-xl font-semibold">Use cases</h2>
       <ul className="list-disc pl-5 text-slate-700 space-y-1">
         <li>
-          Convert <span className="font-medium">{toolName}</span> files quickly for sharing, email,
-          or web upload.
+          Convert files with <span className="font-medium">{toolName}</span> for quick sharing,
+          downloading, or archiving.
         </li>
-        <li>Standardize file formats across devices and apps.</li>
+        <li>Standardize file formats to ensure compatibility across devices and platforms.</li>
         {allowMultiple ? (
-          <li>Process multiple files in one go (batch supported).</li>
+          <li>Convert multiple files in one session to save time (batch supported).</li>
         ) : (
-          <li>Convert a single file with a simple workflow.</li>
+          <li>Convert a single file with a simple, focused workflow.</li>
         )}
         {hasSettings ? (
-          <li>Adjust conversion options when available.</li>
+          <li>Fine-tune output using available conversion options.</li>
         ) : (
-          <li>Use default best-practice settings.</li>
+          <li>Use default best-practice settings for fast, reliable results.</li>
         )}
       </ul>
     </div>
@@ -466,6 +474,9 @@ const seoBlock = (
     {/* Supported formats */}
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">Supported formats</h2>
+      <p className="text-slate-700">
+        This tool supports the following file formats based on its conversion schema.
+      </p>
 
       <div className="space-y-2">
         <h3 className="text-base font-semibold">Input formats</h3>
@@ -486,10 +497,10 @@ const seoBlock = (
     <div className="space-y-3">
       <h2 className="text-xl font-semibold">Why choose this tool</h2>
       <ul className="list-disc pl-5 text-slate-700 space-y-1">
-        <li>Fast, focused, and easy to use.</li>
-        <li>Schema-driven format support.</li>
-        <li>No unnecessary steps.</li>
-        {allowMultiple && <li>Batch processing supported.</li>}
+        <li>Designed for fast, no-friction file conversions.</li>
+        <li>Format support is clearly defined per tool schema.</li>
+        <li>A straightforward workflow without unnecessary steps.</li>
+        {allowMultiple && <li>Batch processing is available when supported.</li>}
       </ul>
     </div>
 
@@ -497,12 +508,13 @@ const seoBlock = (
       <div className="space-y-3">
         <h2 className="text-xl font-semibold">Conversion options</h2>
         <p className="text-slate-700">
-          Available options depend on the selected format and appear dynamically.
+          Available options depend on the selected format and appear dynamically in the tool panel.
         </p>
       </div>
     )}
   </section>
 );
+
 
 
   return (

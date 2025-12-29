@@ -587,8 +587,8 @@ const seoBlock = (
 <div className="rounded-xl border bg-white p-4 space-y-2">
   <h2 className="text-base font-semibold">Quick summary</h2>
   <p className="text-slate-700">
-    {toolName} helps you convert files online with a clean workflow and tool-specific format support.
-  </p>
+  {toolName} lets you convert files online with clear format support and a straightforward process.
+</p>
   <p className="text-slate-700">
     {inFormats.length > 0 ? `Input: ${prettyFormats(inFormats)}. ` : ""}
     {outFormats.length > 0 ? `Output: ${prettyFormats(outFormats)}. ` : ""}
@@ -738,8 +738,9 @@ const seoBlock = (
   <div className="space-y-3">
     <h2 className="text-xl font-semibold">Popular conversions</h2>
     <p className="text-slate-700">
-      Common format conversions supported by this tool (based on available input/output formats).
+      Examples of common conversions you can perform with this tool.
     </p>
+
 
     <div className="flex flex-wrap gap-2">
       {popularConversions.map((c) => (

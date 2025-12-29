@@ -534,6 +534,31 @@ const formatBadges = (arr: string[]) => {
   );
 };
 
+  const relatedTools = (() => {
+  // 靜態候選（可之後再擴充，不影響工具功能）
+  const candidates: Array<{ slug: string; name: string; category: string }> = [
+    { slug: "pdf-merge", name: "PDF Merge", category: "pdf" },
+    { slug: "pdf-split", name: "PDF Split", category: "pdf" },
+    { slug: "pdf-rotate", name: "PDF Rotate", category: "pdf" },
+    { slug: "pdf-crop", name: "PDF Crop", category: "pdf" },
+
+    { slug: "image-convert", name: "Image Converter", category: "image" },
+
+    { slug: "video-convert", name: "Video Converter", category: "video" },
+  ];
+
+  const cat = String(tool.category || "").toLowerCase();
+  const sameCat = candidates.filter(
+    (t) => t.category === cat && t.slug !== tool.slug
+  );
+
+  // fallback：如果 category 不存在或同類太少，就給通用工具（但排除自己）
+  const fallback = candidates.filter((t) => t.slug !== tool.slug);
+
+  const list = (sameCat.length >= 2 ? sameCat : fallback).slice(0, 6);
+  return list;
+})();
+
 
 const seoBlock = (
   <section className="mt-10 space-y-8">
@@ -673,6 +698,24 @@ const seoBlock = (
 </ul>
 
 </div>
+
+
+    {/* Related tools */}
+<div className="space-y-3">
+  <h2 className="text-xl font-semibold">Related tools</h2>
+  <div className="flex flex-wrap gap-2">
+    {relatedTools.map((t) => (
+      <a
+        key={t.slug}
+        href={`/tools/${t.slug}`}
+        className="inline-flex items-center rounded-md border bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+      >
+        {t.name}
+      </a>
+    ))}
+  </div>
+</div>
+
 
     
   </section>

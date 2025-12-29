@@ -694,15 +694,28 @@ const seoBlock = (
     {/* FAQ */}
 <div className="space-y-3">
   <h2 className="text-xl font-semibold">FAQ</h2>
-  <div className="space-y-3">
+
+  <div className="space-y-2">
     {faqItems.map((item) => (
-      <div key={item.q} className="border rounded-lg p-4 bg-white">
-        <h3 className="font-semibold text-base">{item.q}</h3>
-        <p className="text-slate-700 mt-2 leading-relaxed">{item.a}</p>
-      </div>
+      <details
+        key={item.q}
+        className="group rounded-lg border bg-white p-4"
+      >
+        <summary className="cursor-pointer list-none font-semibold text-base flex items-center justify-between gap-3">
+          <span>{item.q}</span>
+          <span className="text-slate-400 group-open:rotate-180 transition-transform">
+            ▾
+          </span>
+        </summary>
+
+        <div className="mt-2 text-slate-700 leading-relaxed">
+          {item.a}
+        </div>
+      </details>
     ))}
   </div>
 </div>
+
 
     {/* Troubleshooting */}
 <div className="space-y-3">

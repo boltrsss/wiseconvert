@@ -537,6 +537,21 @@ const formatBadges = (arr: string[]) => {
 
 const seoBlock = (
   <section className="mt-10 space-y-8">
+{/* Quick summary */}
+<div className="rounded-xl border bg-white p-4 space-y-2">
+  <h2 className="text-base font-semibold">Quick summary</h2>
+  <p className="text-slate-700">
+    {toolName} helps you convert files online with a clean workflow and tool-specific format support.
+  </p>
+  <p className="text-slate-700">
+    {inFormats.length > 0 ? `Input: ${prettyFormats(inFormats)}. ` : ""}
+    {outFormats.length > 0 ? `Output: ${prettyFormats(outFormats)}. ` : ""}
+    {allowMultiple ? "Batch conversion supported. " : "Single-file workflow. "}
+    {hasSettings ? "Optional conversion settings available." : "No extra setup required."}
+  </p>
+</div>
+
+    
     {/* Overview */}
     <div className="space-y-3">
       <h2 className="text-xl font-semibold">About {toolName}</h2>

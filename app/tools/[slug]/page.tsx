@@ -608,15 +608,17 @@ const seoBlock = (
     <div className="space-y-3">
       <h2 className="text-xl font-semibold">Why choose this tool</h2>
       <ul className="list-disc pl-5 text-slate-700 space-y-1">
-  <li>If upload fails, confirm the file format is supported and try again.</li>
-  <li>If the output format you want isn’t listed, upload first — options depend on the tool schema.</li>
-  <li>If the result isn’t as expected, switch output format or reset options (if available).</li>
-  {allowMultiple ? (
-    <li>If converting many files, try fewer files per run for quicker completion.</li>
+  <li>Built to keep the workflow clear: upload → convert → download.</li>
+  <li>Tool-specific format support, defined by the conversion schema.</li>
+  <li>Consistent results with sensible defaults when no options are needed.</li>
+  {hasSettings ? (
+    <li>Extra controls are available when the selected format supports them.</li>
   ) : (
-    <li>If you have multiple files, convert one first to confirm the output before repeating.</li>
+    <li>No extra setup required for most common conversions.</li>
   )}
+  {allowMultiple ? <li>Batch-friendly when you need to process more than one file.</li> : null}
 </ul>
+
 
     </div>
 
@@ -645,28 +647,16 @@ const seoBlock = (
 <div className="space-y-3">
   <h2 className="text-xl font-semibold">Troubleshooting</h2>
   <ul className="list-disc pl-5 text-slate-700 space-y-1">
-    <li>
-      If the upload fails, double-check the file type and try again with a smaller file size.
-    </li>
-    <li>
-      If you don’t see the expected output format, upload the file first — available options depend
-      on the tool schema.
-    </li>
-    <li>
-      If the result looks incorrect, try a different output format or reset conversion options (if
-      available).
-    </li>
-    {allowMultiple ? (
-      <li>
-        For batch conversions, verify all files are supported and keep the number of files
-        reasonable for faster processing.
-      </li>
-    ) : (
-      <li>
-        For best results, convert one file at a time and confirm the output before converting more.
-      </li>
-    )}
-  </ul>
+  <li>If upload fails, confirm the file format is supported and try again.</li>
+  <li>If the output format you want isn’t listed, upload first — options depend on the tool schema.</li>
+  <li>If the result isn’t as expected, switch output format or reset options (if available).</li>
+  {allowMultiple ? (
+    <li>If converting many files, try fewer files per run for quicker completion.</li>
+  ) : (
+    <li>If you have multiple files, convert one first to confirm the output before repeating.</li>
+  )}
+</ul>
+
 </div>
 
     

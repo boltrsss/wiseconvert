@@ -559,7 +559,28 @@ const formatBadges = (arr: string[]) => {
   return list;
 })();
 
+const popularConversions = (() => {
+  const ins = (inFormats || []).map((x) => String(x).toLowerCase());
+  const outs = (outFormats || []).map((x) => String(x).toLowerCase());
 
+  // 只取前幾個，避免太多組合
+  const inTop = ins.slice(0, 3);
+  const outTop = outs.slice(0, 3);
+
+  const combos: Array<{ from: string; to: string }> = [];
+  for (const from of inTop) {
+    for (const to of outTop) {
+      if (!from || !to) continue;
+      if (from === to) continue;
+      combos.push({ from, to });
+    }
+  }
+
+  // 只顯示 6 個
+  return combos.slice(0, 6);
+})();
+
+  
 const seoBlock = (
   <section className="mt-10 space-y-8">
 {/* Quick summary */}
@@ -698,6 +719,27 @@ const seoBlock = (
 </ul>
 
 </div>
+
+    {/* Popular conversions */}
+{popularConversions.length > 0 && (
+  <div className="space-y-3">
+    <h2 className="text-xl font-semibold">Popular conversions</h2>
+    <p className="text-slate-700">
+      Common format conversions supported by this tool (based on available input/output formats).
+    </p>
+
+    <div className="flex flex-wrap gap-2">
+      {popularConversions.map((c) => (
+        <span
+          key={`${c.from}-${c.to}`}
+          className="inline-flex items-center rounded-md border bg-white px-3 py-2 text-sm text-slate-700"
+        >
+          {c.from.toUpperCase()} to {c.to.toUpperCase()}
+        </span>
+      ))}
+    </div>
+  </div>
+)}
 
 
     {/* Related tools */}

@@ -6,35 +6,20 @@ import Link from "next/link";
 import { TOOLS } from "@/lib/toolsConfig";
 import { useLang } from "@/context/LanguageContext";
 import { AdSlot } from "@/components/AdSlot";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher"; // ✅ 新增
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+
+// ✅ 保留 Header import（不在本頁 render，避免雙 Header）
+import Header from "@/components/layout/Header";
 
 export const runtime = "edge";
 
 const categoryLabel: Record<string, { en: string; zh: string }> = {
-  image: {
-    en: "Image",
-    zh: "圖片轉檔",
-  },
-  video: {
-    en: "Video",
-    zh: "影片轉檔",
-  },
-  audio: {
-    en: "Audio",
-    zh: "音訊轉檔",
-  },
-  document: {
-    en: "Document",
-    zh: "文件轉檔",
-  },
-  archive: {
-    en: "Archive",
-    zh: "壓縮檔 / 其他",
-  },
-  other: {
-    en: "Other",
-    zh: "其他工具",
-  },
+  image: { en: "Image", zh: "圖片轉檔" },
+  video: { en: "Video", zh: "影片轉檔" },
+  audio: { en: "Audio", zh: "音訊轉檔" },
+  document: { en: "Document", zh: "文件轉檔" },
+  archive: { en: "Archive", zh: "壓縮檔 / 其他" },
+  other: { en: "Other", zh: "其他工具" },
 };
 
 export default function ToolsIndexPage() {
@@ -65,19 +50,15 @@ export default function ToolsIndexPage() {
   }, [normalizedQuery]);
 
   // 依分類 group
-  const grouped = filteredTools.reduce<Record<string, typeof TOOLS>>(
-    (acc, tool) => {
-      if (!acc[tool.category]) acc[tool.category] = [];
-      acc[tool.category].push(tool);
-      return acc;
-    },
-    {}
-  );
+  const grouped = filteredTools.reduce<Record<string, typeof TOOLS>>((acc, tool) => {
+    if (!acc[tool.category]) acc[tool.category] = [];
+    acc[tool.category].push(tool);
+    return acc;
+  }, {});
 
   const groupedEntries = Object.entries(grouped);
 
-  const pageTitle =
-    lang === "zh" ? "所有線上轉檔工具" : "All Online Conversion Tools";
+  const pageTitle = lang === "zh" ? "所有線上轉檔工具" : "All Online Conversion Tools";
   const pageSubtitle =
     lang === "zh"
       ? "選擇一個適合你的轉檔工具，開始上傳檔案即可使用。"
@@ -87,43 +68,30 @@ export default function ToolsIndexPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* Header */}
-      <header className="border-b border-slate-200 bg-white">
-        <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <a href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-              W
-            </div>
-            <span className="text-xl font-semibold tracking-tight">
-              Wise<span className="text-blue-600">Convert</span>
-            </span>
-          </a>
-
-          {/* 右上角：回首頁 + All tools + 語言切換 */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-4 text-xs sm:text-sm text-slate-500">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700"
-              >
-                <span>←</span>
-                <span>{lang === "zh" ? "回首頁" : "Back to Home"}</span>
-              </Link>
-              <span className="hidden sm:inline">
-                {lang === "zh" ? "全部工具" : "All tools"}
-              </span>
-            </div>
-
-            {/* ✅ 語言切換器 */}
-            <LanguageSwitcher />
-          </div>
-        </div>
-      </header>
+      {/* ✅ 注意：Header 由 app/layout.tsx 統一 render，本頁不再渲染 header，避免雙 Header */}
+      {/* <Header /> */}
 
       <main className="flex-1 pb-20 lg:pb-0">
         <section className="py-10 lg:py-14">
           <div className="max-w-screen-2xl mx-auto px-6 lg:px-10">
+            {/* ✅ 頁面內工具列：Back to Home + Language（保留你要的功能，但不當 header） */}
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+              >
+                <span>←</span>
+                <span>{lang === "zh" ? "回首頁" : "Back to Home"}</span>
+              </Link>
+
+              <div className="flex items-center gap-3">
+                <Link href="/tools" className="text-sm text-slate-500 hover:text-slate-700">
+                  {lang === "zh" ? "全部工具" : "All tools"}
+                </Link>
+                <LanguageSwitcher />
+              </div>
+            </div>
+
             {/* Title + SubTitle + Breadcrumb */}
             <div className="mb-6 max-w-3xl space-y-2">
               <div className="text-[11px] text-slate-400">
@@ -136,9 +104,7 @@ export default function ToolsIndexPage() {
               <h1 className="text-3xl sm:text-[34px] font-semibold text-slate-900">
                 {pageTitle}
               </h1>
-              <p className="text-sm sm:text-base text-slate-500">
-                {pageSubtitle}
-              </p>
+              <p className="text-sm sm:text-base text-slate-500">{pageSubtitle}</p>
             </div>
 
             {/* 上方廣告：桌機 & 手機 */}
@@ -226,9 +192,7 @@ export default function ToolsIndexPage() {
                               {tool.outputFormats.join(", ").toUpperCase()}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-500">
-                            {tool.shortDescription[lang]}
-                          </p>
+                          <p className="text-xs text-slate-500">{tool.shortDescription[lang]}</p>
                         </Link>
                       ))}
                     </div>

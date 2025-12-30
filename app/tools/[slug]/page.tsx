@@ -401,6 +401,57 @@ export default function DynamicToolPage() {
     }
   };
 
+//插入
+
+  // --- Phase C-1: Basic dynamic title/description (safe, client-only) ---
+  useEffect(() => {
+    if (!tool) return;
+
+    const toolName = tool.name || "WiseConvert Tool";
+    const inFormats = Array.isArray(tool.input_formats) ? tool.input_formats : [];
+    const outFormats = Array.isArray((tool as any).output_formats) ? (tool as any).output_formats : [];
+
+    const fmtHint =
+      inFormats.length && outFormats.length
+        ? `${inFormats.slice(0, 3).join(", ").toUpperCase()} → ${outFormats
+            .slice(0, 3)
+            .join(", ")
+            .toUpperCase()}`
+        : "";
+
+    const title = fmtHint
+      ? `${toolName} (${fmtHint}) | WiseConvert`
+      : `${toolName} | WiseConvert`;
+
+    const descBase =
+      (tool.description || "").trim() ||
+      "Convert files online with WiseConvert — fast, simple, and secure.";
+
+    const description =
+      fmtHint && descBase.length < 140
+        ? `${descBase} Supported formats: ${fmtHint}.`
+        : descBase;
+
+    // <title>
+    document.title = title;
+
+    // <meta name="description">
+    const ensureMeta = () => {
+      let tag = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+      if (!tag) {
+        tag = document.createElement("meta");
+        tag.name = "description";
+        document.head.appendChild(tag);
+      }
+      tag.content = description;
+    };
+
+    ensureMeta();
+  }, [tool]);
+//結束
+
+  
+  
   if (loadingSchema) return <div className="p-8">Loading…</div>;
   if (schemaError) return <div className="p-8 text-red-600">{schemaError}</div>;
   if (!tool) return <div className="p-8 text-red-600">Tool not found</div>;

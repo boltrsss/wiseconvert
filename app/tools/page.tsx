@@ -6,9 +6,9 @@ import Link from "next/link";
 import { TOOLS } from "@/lib/toolsConfig";
 import { useLang } from "@/context/LanguageContext";
 import { AdSlot } from "@/components/AdSlot";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 // ✅ 保留 Header import（不在本頁 render，避免雙 Header）
+// 若你不需要「一定要 import Header」，也可以移除這行
 import Header from "@/components/layout/Header";
 
 export const runtime = "edge";
@@ -28,7 +28,6 @@ export default function ToolsIndexPage() {
 
   const normalizedQuery = query.trim().toLowerCase();
 
-  // 依搜尋關鍵字過濾工具
   const filteredTools = React.useMemo(() => {
     if (!normalizedQuery) return TOOLS;
 
@@ -49,7 +48,6 @@ export default function ToolsIndexPage() {
     });
   }, [normalizedQuery]);
 
-  // 依分類 group
   const grouped = filteredTools.reduce<Record<string, typeof TOOLS>>((acc, tool) => {
     if (!acc[tool.category]) acc[tool.category] = [];
     acc[tool.category].push(tool);
@@ -68,14 +66,14 @@ export default function ToolsIndexPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      {/* ✅ 注意：Header 由 app/layout.tsx 統一 render，本頁不再渲染 header，避免雙 Header */}
+      {/* ✅ Header 由 app/layout.tsx 統一 render，本頁不再渲染，避免雙 Header */}
       {/* <Header /> */}
 
       <main className="flex-1 pb-20 lg:pb-0">
         <section className="py-10 lg:py-14">
           <div className="max-w-screen-2xl mx-auto px-6 lg:px-10">
-            {/* ✅ 頁面內工具列：Back to Home + Language（保留你要的功能，但不當 header） */}
-            <div className="mb-4 flex items-center justify-between gap-3">
+            {/* ✅ 只保留 Back to Home（LanguageSwitcher 統一放在全站 Header） */}
+            <div className="mb-4">
               <Link
                 href="/"
                 className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
@@ -83,13 +81,6 @@ export default function ToolsIndexPage() {
                 <span>←</span>
                 <span>{lang === "zh" ? "回首頁" : "Back to Home"}</span>
               </Link>
-
-              <div className="flex items-center gap-3">
-                <Link href="/tools" className="text-sm text-slate-500 hover:text-slate-700">
-                  {lang === "zh" ? "全部工具" : "All tools"}
-                </Link>
-                <LanguageSwitcher />
-              </div>
             </div>
 
             {/* Title + SubTitle + Breadcrumb */}

@@ -67,7 +67,7 @@ function fileFingerprint(f: File) {
 
 export default function DynamicToolPage() {
   const params = useParams();
-  const slug = (params.slug as string) || "";
+  const slug = Array.isArray(params.slug) ? params.slug[0] : (params.slug as string) || "";
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -112,7 +112,10 @@ export default function DynamicToolPage() {
         setStatus(null);
         setStatusError(null);
 
-        const res = await fetch(`${API_BASE_URL}/api/tools/${slug}`);
+        const res = await fetch(`${API_BASE_URL}/tools/${encodeURIComponent(slug)}`, {
+  cache: "no-store",
+});
+
         if (!res.ok) throw new Error("Tool not found.");
 
         const data: ToolSchema = await res.json();

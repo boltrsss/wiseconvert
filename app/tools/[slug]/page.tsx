@@ -31,6 +31,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const slug = params.slug;
 
+  // ✅ Canonical（統一唯一版本）
+  const canonical = `https://www.wiseconverthub.com/tools/${slug}`;
+
   try {
     const res = await fetch(`${API_BASE_URL}/api/tools/${slug}`, {
       cache: "no-store",
@@ -41,6 +44,9 @@ export async function generateMetadata({
         title: "WiseConvert Tool",
         description:
           "Convert files online with WiseConvert — fast, simple, and secure.",
+        alternates: {
+          canonical,
+        },
       };
     }
 
@@ -64,12 +70,21 @@ export async function generateMetadata({
         ? `${baseDesc} Supported formats: ${fmtHint}.`
         : baseDesc;
 
-    return { title, description };
+    return {
+      title,
+      description,
+      alternates: {
+        canonical,
+      },
+    };
   } catch {
     return {
       title: "WiseConvert Tool",
       description:
         "Convert files online with WiseConvert — fast, simple, and secure.",
+      alternates: {
+        canonical,
+      },
     };
   }
 }

@@ -27,12 +27,19 @@ function prettyFormats(arr: string[] | undefined) {
     .join(", ");
 }
 
+/**
+ * ✅ 判斷是否非正式環境（避免 staging/preview 被收錄）
+ * - Cloudflare Pages：CF_PAGES_ENVIRONMENT = "production" | "preview"
+ * - Vercel：VERCEL_ENV = "production" | "preview" | "development"
+ * - 本機：NODE_ENV !== "production"
+ *
+ * ⚠️ 不使用 CF_PAGES_URL（production 也常是 *.pages.dev，會誤判全站 noindex）
+ */
 function isNonProdEnvironment(): boolean {
   const nodeEnv = process.env.NODE_ENV; // production / development
   const vercelEnv = process.env.VERCEL_ENV; // production / preview / development
+  const cfEnv = process.env.CF_PAGES_ENVIRONMENT; // production / preview
   const cfBranch = process.env.CF_PAGES_BRANCH; // main / production / others
-  const cfUrl = process.env.CF_PAGES_URL; // preview url
-  const nextPublicSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
   // dev 一律 non-prod
   if (nodeEnv !== "production") return true;
@@ -40,19 +47,13 @@ function isNonProdEnvironment(): boolean {
   // Vercel preview/dev
   if (vercelEnv && vercelEnv !== "production") return true;
 
-  // Cloudflare Pages preview（保守：不是正式網域就 non-prod）
-  if (cfUrl && !cfUrl.includes("wiseconverthub.com")) return true;
-
-  // 若你的 production 分支是 main/production，其他分支視為 non-prod
-  if (cfBranch && !["main", "production"].includes(cfBranch)) return true;
-
-  // 你若有設定 NEXT_PUBLIC_SITE_URL 且不是正式網域，也視為 non-prod
-  if (
-    nextPublicSiteUrl &&
-    ![PROD_SITE_URL, "https://wiseconverthub.com"].includes(nextPublicSiteUrl)
-  ) {
-    return true;
+  // ✅ Cloudflare Pages：用 CF_PAGES_ENVIRONMENT 最準
+  if (cfEnv) {
+    return cfEnv !== "production";
   }
+
+  // 若沒有 cfEnv（理論上不該），保守用 branch 判斷
+  if (cfBranch && !["main", "production"].includes(cfBranch)) return true;
 
   return false;
 }
@@ -118,6 +119,6 @@ export async function generateMetadata({
 }
 
 export default function Page() {
-  // ✅ 不傳 slug，避免 TS error；ToolPageClient 自己用 useParams() 取 slug
+  // ✅ 不傳 slug，ToolPageClient 自己用 useParams() 取 slug
   return <ToolPageClient />;
 }

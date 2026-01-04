@@ -35,8 +35,7 @@ export async function generateMetadata({
   const slug = params.slug;
   const canonicalUrl = `${PROD_SITE_URL}/tools/${encodeURIComponent(slug)}`;
 
-  // ✅ 不再依賴 CF_PAGES_ENVIRONMENT / VERCEL_ENV
-  // ✅ 只用 Host 判斷：正式網域才 index
+  // ✅ 用 Host 判斷是否正式網域（不依賴 CF/Vercel env）
   const h = headers();
   const reqHost = (h.get("x-forwarded-host") || h.get("host") || "").toLowerCase();
   const isProdHost =
@@ -44,32 +43,54 @@ export async function generateMetadata({
   const nonProd = !isProdHost;
 
   let tool: ToolSchema | null = null;
+  let isMissingTool = false; // ✅ 只在「明確 404」時才視為不存在
 
   try {
+    // ✅ 這裡必須跟你 ToolPageClient 一致：/api/tools/:slug
     const res = await fetch(
-      `${API_BASE_URL}/tools/${encodeURIComponent(slug)}`,
+      `${API_BASE_URL}/api/tools/${encodeURIComponent(slug)}`,
       { cache: "no-store" }
     );
 
-    if (res.ok) {
+    if (res.status === 404) {
+      isMissingTool = true;
+    } else if (res.ok) {
       tool = (await res.json()) as ToolSchema;
+    } else {
+      // 其他錯誤（500/timeout 等）：不要當成 tool 不存在
+      isMissingTool = false;
     }
   } catch {
-    tool = null;
+    // fetch 失敗：不要當成 tool 不存在
+    isMissingTool = false;
   }
 
-  // ✅ Robots：非正式 host 一律 noindex；正式 host：存在 tool 才 index
+  // ✅ Robots 規則（最安全）
+  // - 非正式網域：一律 noindex
+  // - 正式網域：只有明確 404 才 noindex；其餘一律 index（避免 API 抖動害你被 noindex）
   const robots: Metadata["robots"] = nonProd
     ? { index: false, follow: false }
-    : tool
-    ? { index: true, follow: true }
-    : { index: false, follow: false };
+    : isMissingTool
+    ? { index: false, follow: false }
+    : { index: true, follow: true };
 
-  if (!tool) {
+  // ✅ tool 不存在（明確 404）才回 not found metadata
+  if (isMissingTool) {
     return {
       metadataBase: new URL(PROD_SITE_URL),
       title: "Tool Not Found | WiseConvertHub",
       description: "This tool page does not exist.",
+      alternates: { canonical: canonicalUrl },
+      robots,
+    };
+  }
+
+  // ✅ tool 取不到（但不是 404）：給安全 fallback（仍 index）
+  if (!tool) {
+    return {
+      metadataBase: new URL(PROD_SITE_URL),
+      title: "WiseConvertHub Tool | WiseConvertHub",
+      description: "Convert files online with WiseConvertHub — fast, simple, and secure.",
       alternates: { canonical: canonicalUrl },
       robots,
     };

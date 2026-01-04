@@ -1,5 +1,6 @@
 // app/tools/[slug]/page.tsx
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import ToolPageClient from "./ToolPageClient";
 
 export const runtime = "edge";
@@ -15,7 +16,6 @@ type ToolSchema = {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
 
-// canonical 永遠指向正式站，避免 preview/staging duplicate
 const PROD_SITE_URL = "https://www.wiseconverthub.com";
 
 function prettyFormats(arr: string[] | undefined) {
@@ -27,37 +27,6 @@ function prettyFormats(arr: string[] | undefined) {
     .join(", ");
 }
 
-/**
- * ✅ 判斷是否非正式環境（避免 staging/preview 被收錄）
- * - Cloudflare Pages：CF_PAGES_ENVIRONMENT = "production" | "preview"
- * - Vercel：VERCEL_ENV = "production" | "preview" | "development"
- * - 本機：NODE_ENV !== "production"
- *
- * ⚠️ 不使用 CF_PAGES_URL（production 也常是 *.pages.dev，會誤判全站 noindex）
- */
-function isNonProdEnvironment(): boolean {
-  const nodeEnv = process.env.NODE_ENV; // production / development
-  const vercelEnv = process.env.VERCEL_ENV; // production / preview / development
-  const cfEnv = process.env.CF_PAGES_ENVIRONMENT; // production / preview
-  const cfBranch = process.env.CF_PAGES_BRANCH; // main / production / others
-
-  // dev 一律 non-prod
-  if (nodeEnv !== "production") return true;
-
-  // Vercel preview/dev
-  if (vercelEnv && vercelEnv !== "production") return true;
-
-  // ✅ Cloudflare Pages：用 CF_PAGES_ENVIRONMENT 最準
-  if (cfEnv) {
-    return cfEnv !== "production";
-  }
-
-  // 若沒有 cfEnv（理論上不該），保守用 branch 判斷
-  if (cfBranch && !["main", "production"].includes(cfBranch)) return true;
-
-  return false;
-}
-
 export async function generateMetadata({
   params,
 }: {
@@ -66,7 +35,13 @@ export async function generateMetadata({
   const slug = params.slug;
   const canonicalUrl = `${PROD_SITE_URL}/tools/${encodeURIComponent(slug)}`;
 
-  const nonProd = isNonProdEnvironment();
+  // ✅ 不再依賴 CF_PAGES_ENVIRONMENT / VERCEL_ENV
+  // ✅ 只用 Host 判斷：正式網域才 index
+  const h = headers();
+  const reqHost = (h.get("x-forwarded-host") || h.get("host") || "").toLowerCase();
+  const isProdHost =
+    reqHost === "www.wiseconverthub.com" || reqHost === "wiseconverthub.com";
+  const nonProd = !isProdHost;
 
   let tool: ToolSchema | null = null;
 
@@ -83,7 +58,7 @@ export async function generateMetadata({
     tool = null;
   }
 
-  // ✅ C-4 robots（含：non-prod 一律 noindex）
+  // ✅ Robots：非正式 host 一律 noindex；正式 host：存在 tool 才 index
   const robots: Metadata["robots"] = nonProd
     ? { index: false, follow: false }
     : tool
@@ -119,6 +94,5 @@ export async function generateMetadata({
 }
 
 export default function Page() {
-  // ✅ 不傳 slug，ToolPageClient 自己用 useParams() 取 slug
   return <ToolPageClient />;
 }

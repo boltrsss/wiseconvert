@@ -112,7 +112,7 @@ export default function DynamicToolPage() {
         setStatus(null);
         setStatusError(null);
 
-        const res = await fetch(`${API_BASE_URL}/tools/${encodeURIComponent(slug)}`, {
+       const res = await fetch(`${API_BASE_URL}/api/tools/${encodeURIComponent(slug)}`, {
   cache: "no-store",
 });
 

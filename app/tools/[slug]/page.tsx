@@ -1,6 +1,5 @@
 // app/tools/[slug]/page.tsx
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import ToolPageClient from "./ToolPageClient";
 
 export const runtime = "edge";
@@ -35,18 +34,10 @@ export async function generateMetadata({
   const slug = params.slug;
   const canonicalUrl = `${PROD_SITE_URL}/tools/${encodeURIComponent(slug)}`;
 
-  // ✅ 用 Host 判斷是否正式網域（不依賴 CF/Vercel env）
-  const h = headers();
-  const reqHost = (h.get("x-forwarded-host") || h.get("host") || "").toLowerCase();
-  const isProdHost =
-    reqHost === "www.wiseconverthub.com" || reqHost === "wiseconverthub.com";
-  const nonProd = !isProdHost;
-
   let tool: ToolSchema | null = null;
-  let isMissingTool = false; // ✅ 只在「明確 404」時才視為不存在
+  let isMissingTool = false; // ✅ 只有明確 404 才算不存在
 
   try {
-    // ✅ 這裡必須跟你 ToolPageClient 一致：/api/tools/:slug
     const res = await fetch(
       `${API_BASE_URL}/api/tools/${encodeURIComponent(slug)}`,
       { cache: "no-store" }
@@ -56,25 +47,18 @@ export async function generateMetadata({
       isMissingTool = true;
     } else if (res.ok) {
       tool = (await res.json()) as ToolSchema;
-    } else {
-      // 其他錯誤（500/timeout 等）：不要當成 tool 不存在
-      isMissingTool = false;
     }
   } catch {
-    // fetch 失敗：不要當成 tool 不存在
-    isMissingTool = false;
+    // API 暫時失敗：不要把整頁變 noindex
   }
 
-  // ✅ Robots 規則（最安全）
-  // - 非正式網域：一律 noindex
-  // - 正式網域：只有明確 404 才 noindex；其餘一律 index（避免 API 抖動害你被 noindex）
-  const robots: Metadata["robots"] = nonProd
-    ? { index: false, follow: false }
-    : isMissingTool
+  // ✅ C-4 Robots 最穩定規則：
+  // - 只有明確 404 才 noindex
+  // - 其他一律 index（避免 Cloudflare 環境判斷誤傷）
+  const robots: Metadata["robots"] = isMissingTool
     ? { index: false, follow: false }
     : { index: true, follow: true };
 
-  // ✅ tool 不存在（明確 404）才回 not found metadata
   if (isMissingTool) {
     return {
       metadataBase: new URL(PROD_SITE_URL),
@@ -85,12 +69,13 @@ export async function generateMetadata({
     };
   }
 
-  // ✅ tool 取不到（但不是 404）：給安全 fallback（仍 index）
+  // tool 拿不到（但非 404）：給安全 fallback（仍 index）
   if (!tool) {
     return {
       metadataBase: new URL(PROD_SITE_URL),
       title: "WiseConvertHub Tool | WiseConvertHub",
-      description: "Convert files online with WiseConvertHub — fast, simple, and secure.",
+      description:
+        "Convert files online with WiseConvertHub — fast, simple, and secure.",
       alternates: { canonical: canonicalUrl },
       robots,
     };
@@ -117,3 +102,4 @@ export async function generateMetadata({
 export default function Page() {
   return <ToolPageClient />;
 }
+

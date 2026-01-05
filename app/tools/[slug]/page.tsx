@@ -4,6 +4,10 @@ import ToolPageClient from "./ToolPageClient";
 
 export const runtime = "edge";
 
+// ✅ 強制 SSR（避免 CF/adapter 把動態頁落到 404/error HTML，導致自動 noindex）
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type ToolSchema = {
   slug: string;
   name: string;
@@ -35,7 +39,7 @@ export async function generateMetadata({
   const canonicalUrl = `${PROD_SITE_URL}/tools/${encodeURIComponent(slug)}`;
 
   let tool: ToolSchema | null = null;
-  let isMissingTool = false; // ✅ 只有明確 404 才算不存在
+  let isMissingTool = false;
 
   try {
     const res = await fetch(
@@ -43,18 +47,10 @@ export async function generateMetadata({
       { cache: "no-store" }
     );
 
-    if (res.status === 404) {
-      isMissingTool = true;
-    } else if (res.ok) {
-      tool = (await res.json()) as ToolSchema;
-    }
-  } catch {
-    // API 暫時失敗：不要把整頁變 noindex
-  }
+    if (res.status === 404) isMissingTool = true;
+    else if (res.ok) tool = (await res.json()) as ToolSchema;
+  } catch {}
 
-  // ✅ C-4 Robots 最穩定規則：
-  // - 只有明確 404 才 noindex
-  // - 其他一律 index（避免 Cloudflare 環境判斷誤傷）
   const robots: Metadata["robots"] = isMissingTool
     ? { index: false, follow: false }
     : { index: true, follow: true };
@@ -69,7 +65,6 @@ export async function generateMetadata({
     };
   }
 
-  // tool 拿不到（但非 404）：給安全 fallback（仍 index）
   if (!tool) {
     return {
       metadataBase: new URL(PROD_SITE_URL),
@@ -102,4 +97,3 @@ export async function generateMetadata({
 export default function Page() {
   return <ToolPageClient />;
 }
-

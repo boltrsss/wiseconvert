@@ -1,49 +1,36 @@
 // app/tools/[slug]/page.tsx
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
-import { TOOLS, type ToolDefinition } from "@/lib/toolsConfig";
 
 export const runtime = "edge";
 
-// ✅ client-only: 避免 Edge SSR 評估 ToolPageClient 造成 500
+// ✅ 關鍵：讓超大 Client UI 不參與 SSR，避免 Edge 500
 const ToolPageClient = dynamic(() => import("./ToolPageClient"), {
   ssr: false,
 });
 
 const PROD_SITE_URL = "https://www.wiseconverthub.com";
 
-function isNonProdEnvironment(): boolean {
-  const nodeEnv = process.env.NODE_ENV; // production / development
-  const vercelEnv = process.env.VERCEL_ENV; // production / preview / development
-  const cfBranch = process.env.CF_PAGES_BRANCH; // main / production / others
-  const cfUrl = process.env.CF_PAGES_URL; // preview url
-  const nextPublicSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+function isProd(): boolean {
+  // Cloudflare Pages production build 通常：
+  // NODE_ENV=production 且 CF_PAGES_BRANCH=main（或你設定的 production）
+  const nodeEnv = process.env.NODE_ENV;
+  const cfBranch = process.env.CF_PAGES_BRANCH;
 
-  // dev 一律 non-prod
-  if (nodeEnv !== "production") return true;
+  if (nodeEnv !== "production") return false;
 
-  // Vercel preview/dev
-  if (vercelEnv && vercelEnv !== "production") return true;
+  // 沒有 branch 也先視為 prod（避免誤判 noindex）
+  if (!cfBranch) return true;
 
-  // Cloudflare Pages preview（不是正式網域就 non-prod）
-  if (cfUrl && !cfUrl.includes("wiseconverthub.com")) return true;
-
-  // 你的 production 分支（通常是 main）
-  if (cfBranch && !["main", "production"].includes(cfBranch)) return true;
-
-  // 若有設定 NEXT_PUBLIC_SITE_URL 且不是正式站
-  if (
-    nextPublicSiteUrl &&
-    ![PROD_SITE_URL, "https://wiseconverthub.com"].includes(nextPublicSiteUrl)
-  ) {
-    return true;
-  }
-
-  return false;
+  return ["main", "production"].includes(cfBranch);
 }
 
-function getTool(slug: string): ToolDefinition | undefined {
-  return TOOLS.find((t) => t.slug === slug);
+function titleFromSlug(slug: string) {
+  const nice = slug
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(" ");
+  return `${nice} | WiseConvertHub`;
 }
 
 export async function generateMetadata({
@@ -54,40 +41,20 @@ export async function generateMetadata({
   const slug = params.slug;
   const canonicalUrl = `${PROD_SITE_URL}/tools/${encodeURIComponent(slug)}`;
 
-  const nonProd = isNonProdEnvironment();
-  const tool = getTool(slug);
+  const prod = isProd();
 
-  // ✅ Robots 規則：
-  // - non-prod: 一律 noindex,nofollow（避免 preview duplicate）
-  // - prod + tool exists: index,follow
-  // - prod + tool missing: noindex,nofollow
-  const robots: Metadata["robots"] = nonProd
-    ? { index: false, follow: false }
-    : tool
+  // ✅ C-4 Robots（穩定版）：
+  // - prod：index,follow
+  // - non-prod：noindex,nofollow（避免 preview duplicate）
+  const robots: Metadata["robots"] = prod
     ? { index: true, follow: true }
     : { index: false, follow: false };
 
-  if (!tool) {
-    return {
-      metadataBase: new URL(PROD_SITE_URL),
-      title: "Tool Not Found | WiseConvertHub",
-      description: "This tool page does not exist.",
-      alternates: { canonical: canonicalUrl },
-      robots,
-    };
-  }
-
-  // ✅ 先用 en 作 SSR（語言切換的內容層交給 ToolSeoClient / 內容區塊）
-  const title = tool.seoTitle?.en || tool.title?.en || `${tool.slug} | WiseConvertHub`;
-  const description =
-    tool.seoDescription?.en ||
-    tool.shortDescription?.en ||
-    "Convert files online with WiseConvertHub — fast, simple, and secure.";
-
   return {
     metadataBase: new URL(PROD_SITE_URL),
-    title,
-    description,
+    title: titleFromSlug(slug),
+    description:
+      "Convert files online with WiseConvertHub — fast, simple, and secure.",
     alternates: { canonical: canonicalUrl },
     robots,
   };

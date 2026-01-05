@@ -1,24 +1,11 @@
 // app/tools/[slug]/page.tsx
 import type { Metadata } from "next";
 import ToolPageClient from "./ToolPageClient";
+import { TOOLS, type ToolDefinition } from "@/lib/toolsConfig";
 
-//export const runtime = "edge";
+export const runtime = "edge";
 
-// ✅ 強制 SSR（避免 CF/adapter 把動態頁落到 404/error HTML，導致自動 noindex）
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-type ToolSchema = {
-  slug: string;
-  name: string;
-  description: string;
-  input_formats: string[];
-  output_formats?: string[];
-};
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://cnv.wiseconverthub.com";
-
+// canonical 永遠指向正式站，避免 preview/staging duplicate
 const PROD_SITE_URL = "https://www.wiseconverthub.com";
 
 function prettyFormats(arr: string[] | undefined) {
@@ -30,6 +17,10 @@ function prettyFormats(arr: string[] | undefined) {
     .join(", ");
 }
 
+function getToolFromConfig(slug: string): ToolDefinition | undefined {
+  return TOOLS.find((t) => t.slug === slug);
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -38,24 +29,15 @@ export async function generateMetadata({
   const slug = params.slug;
   const canonicalUrl = `${PROD_SITE_URL}/tools/${encodeURIComponent(slug)}`;
 
-  let tool: ToolSchema | null = null;
-  let isMissingTool = false;
+  // ✅ 不再 fetch 後端（避免 edge 500 → error page → noindex）
+  const tool = getToolFromConfig(slug);
 
-  try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/tools/${encodeURIComponent(slug)}`,
-      { cache: "no-store" }
-    );
+  // ✅ C-4 robots（存在的 tool 才 index）
+  const robots: Metadata["robots"] = tool
+    ? { index: true, follow: true }
+    : { index: false, follow: false };
 
-    if (res.status === 404) isMissingTool = true;
-    else if (res.ok) tool = (await res.json()) as ToolSchema;
-  } catch {}
-
-  const robots: Metadata["robots"] = isMissingTool
-    ? { index: false, follow: false }
-    : { index: true, follow: true };
-
-  if (isMissingTool) {
+  if (!tool) {
     return {
       metadataBase: new URL(PROD_SITE_URL),
       title: "Tool Not Found | WiseConvertHub",
@@ -65,19 +47,16 @@ export async function generateMetadata({
     };
   }
 
-  if (!tool) {
-    return {
-      metadataBase: new URL(PROD_SITE_URL),
-      title: "WiseConvertHub Tool | WiseConvertHub",
-      description:
-        "Convert files online with WiseConvertHub — fast, simple, and secure.",
-      alternates: { canonical: canonicalUrl },
-      robots,
-    };
-  }
+  // ✅ 先用英文當 SSR 預設（你原本 SEO client 會依語言顯示內容層）
+  const seoTitle = tool.seoTitle?.en ?? tool.title?.en ?? tool.slug;
+  const seoDescription =
+    tool.seoDescription?.en ??
+    tool.shortDescription?.en ??
+    "Convert files online with WiseConvertHub — fast, simple, and secure.";
 
-  const inFmt = prettyFormats(tool.input_formats);
-  const outFmt = prettyFormats(tool.output_formats);
+  const inFmt = prettyFormats(tool.inputFormats);
+  const outFmt = prettyFormats(tool.outputFormats);
+
   const formatHint =
     inFmt && outFmt
       ? ` Convert ${inFmt} to ${outFmt}.`
@@ -87,8 +66,8 @@ export async function generateMetadata({
 
   return {
     metadataBase: new URL(PROD_SITE_URL),
-    title: `${tool.name} | WiseConvertHub`,
-    description: `${tool.description ?? ""}${formatHint}`.trim(),
+    title: `${seoTitle} | WiseConvertHub`,
+    description: `${seoDescription}${formatHint}`.trim(),
     alternates: { canonical: canonicalUrl },
     robots,
   };

@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import ToolPageClient from "./ToolPageClient";
 
-export const runtime = "edge";
+//export const runtime = "edge";
 
 // ✅ 強制 SSR（避免 CF/adapter 把動態頁落到 404/error HTML，導致自動 noindex）
 export const dynamic = "force-dynamic";
